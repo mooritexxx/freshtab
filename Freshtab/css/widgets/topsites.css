@@ -1,0 +1,149 @@
+/* css/widgets/topsites.css - Styles for the Top Sites / Favorites Widget - V3.0 */
+
+/* General subtitle style for sections within a widget */
+.widget-subtitle {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--text-color-subtle);
+    margin-top: 0; 
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed var(--widget-border-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+/* Add top margin if it's not the first subtitle */
+#userFavoriteLinksArea + #topSitesListArea .widget-subtitle,
+#userFavoriteLinksArea .widget-subtitle + ul { /* If subtitle directly precedes a ul */
+    margin-top: 15px;
+}
+
+
+/* Styling for User Favorites List (in main widget display) */
+#topsites-widget ul.favorites-list-area { /* ul for favorites */
+    list-style: none; 
+    padding-left: 0; 
+    margin: 0 0 15px 0; 
+}
+#topsites-widget .favorite-item {
+    display: flex; /* To align link and remove button */
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+#topsites-widget .favorite-item a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--link-color);
+    padding: 6px 8px; 
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease; 
+    flex-grow: 1; /* Link takes most space */
+    margin-right: 5px; /* Space before remove button */
+    overflow: hidden; /* For text overflow on title */
+}
+#topsites-widget .favorite-item a:hover {
+    background-color: var(--page-bg); 
+    color: var(--link-hover-color);
+}
+#topsites-widget .favorite-favicon {
+    width: 16px; height: 16px; margin-right: 10px;
+    border-radius: 3px; flex-shrink: 0; 
+}
+#topsites-widget .favorite-title {
+    font-size: 0.9em; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    color: var(--text-color-secondary); 
+}
+#topsites-widget .favorite-item a:hover .favorite-title {
+    color: var(--link-hover-color); 
+}
+.favorite-remove-btn { /* Remove button for favorites in main widget view */
+    font-size: 1em; /* Slightly smaller than hide button for top sites */
+    color: var(--text-color-subtle);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.favorite-remove-btn:hover {
+    color: var(--button-danger-bg);
+    background-color: rgba(0,0,0,0.05);
+}
+body.dark-mode .favorite-remove-btn:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+
+/* Styling for Browser Top Sites List */
+#topsites-widget ul.topsites-list-area { /* ul for browser top sites */
+    list-style: none; 
+    padding-left: 0; 
+    margin: 0;      
+}
+#topsites-widget .topsite-item {
+    margin-bottom: 4px;
+}
+.topsite-content-wrapper { 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+#topsites-widget .topsite-item a { 
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--link-color);
+    padding: 6px 0px; 
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease; 
+    flex-grow: 1; 
+    margin-right: 5px; 
+    overflow: hidden; 
+}
+#topsites-widget .topsite-item a:hover {
+    background-color: var(--page-bg); 
+    color: var(--link-hover-color);
+}
+#topsites-widget .topsite-favicon {
+    width: 16px; height: 16px; margin-right: 10px;
+    border-radius: 3px; flex-shrink: 0; 
+}
+#topsites-widget .topsite-title {
+    font-size: 0.9em; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    color: var(--text-color-secondary); 
+}
+#topsites-widget .topsite-item a:hover .topsite-title {
+    color: var(--link-hover-color); 
+}
+.topsite-hide-btn {
+    font-size: 1em; 
+    color: var(--text-color-subtle);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-left: 5px;
+}
+.topsite-hide-btn:hover {
+    color: var(--button-danger-bg);
+    background-color: rgba(0,0,0,0.05);
+}
+body.dark-mode .topsite-hide-btn:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+#topsites-widget .topsites-empty-message {
+    color: var(--text-color-subtle);
+    padding: 15px 0; 
+    text-align: center;
+    font-style: italic;
+    font-size: 0.9em;
+}

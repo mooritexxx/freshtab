@@ -1,0 +1,37 @@
+/* css/widgets/time.css - Styles for the static date/time display - V2.7 */
+
+.datetime-icon {
+    font-size: 1.6em; 
+    margin-right: 10px; 
+    line-height: 1; 
+    color: var(--text-color-primary); 
+    animation: fadeInDatetime 0.5s ease-in-out;
+}
+
+.datetime-text-content {
+    text-align: right;
+    animation: fadeInDatetime 0.5s ease-in-out;
+}
+
+.datetime-text-content h3 { 
+    font-size: 0.85em; 
+    font-weight: normal; 
+    color: var(--text-color-secondary); 
+    margin: 0 0 2px 0; 
+    line-height: 1.2;
+    white-space: nowrap; 
+}
+
+.datetime-text-content p { 
+    font-size: 1.3em; 
+    font-weight: 600; 
+    color: var(--text-color-primary); 
+    margin: 0;
+    line-height: 1.1;
+    white-space: nowrap; 
+}
+
+@keyframes fadeInDatetime {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

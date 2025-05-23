@@ -1,0 +1,255 @@
+/* css/main.css - V2.7/V3.0 (Final Scrolling Logic) */
+
+/* --- Theme Color Variables --- */
+body {
+    /* Light Theme (Default) */
+    --page-bg: #f0f2f5;
+    --text-color-primary: #333;
+    --text-color-secondary: #555;
+    --text-color-subtle: #777;
+    --accent-color: #007bff;
+    --accent-color-hover: #0056b3;
+    --widget-bg: #ffffff;
+    --widget-header-text: var(--accent-color);
+    --widget-border-light: #e9ecef;
+    --widget-shadow: rgba(0,0,0,0.07);
+    --button-primary-bg: var(--accent-color);
+    --button-primary-hover-bg: var(--accent-color-hover);
+    --button-primary-text: #fff;
+    --button-secondary-bg: #6c757d;
+    --button-secondary-hover-bg: #5a6268;
+    --button-secondary-text: #fff;
+    --button-danger-bg: #dc3545;
+    --button-danger-hover-bg: #c82333;
+    --button-danger-text: #fff;
+    --input-bg: #fff;
+    --input-text: var(--text-color-primary);
+    --input-border-color: #ccc;
+    --placeholder-bg: #eee;
+    --datetime-bg: rgba(255, 255, 255, 0.9);
+    --datetime-shadow: rgba(0,0,0,0.1);
+    /* Specific datetime text colors in time.css */
+    --error-text: #721c24;
+    --error-bg: #f8d7da;
+    --error-border: #f5c6cb;
+    --link-color: var(--accent-color);
+    --link-hover-color: var(--accent-color-hover);
+    --scrollbar-thumb-bg: #ccc;
+    --scrollbar-track-bg: var(--page-bg);
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--page-bg);
+    color: var(--text-color-primary);
+    min-height: 100vh;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode {
+    /* Dark Theme Overrides */
+    --page-bg: #1f2023;
+    --text-color-primary: #e0e0e0;
+    --text-color-secondary: #b0b0b0;
+    --text-color-subtle: #888;
+    --accent-color: #3498db;
+    --accent-color-hover: #2980b9;
+    --widget-bg: #2c2f33;
+    --widget-header-text: var(--accent-color);
+    --widget-border-light: #404040;
+    --widget-shadow: rgba(0,0,0,0.25);
+    --button-primary-bg: var(--accent-color);
+    --button-primary-hover-bg: var(--accent-color-hover);
+    --button-secondary-bg: #4f545c;
+    --button-secondary-hover-bg: #6a717b;
+    --button-danger-bg: #c82333;
+    --button-danger-hover-bg: #a71d2a;
+    --input-bg: #3a3f44;
+    --input-text: var(--text-color-primary);
+    --input-border-color: #555;
+    --placeholder-bg: #444;
+    --datetime-bg: rgba(44, 47, 51, 0.85);
+    --datetime-shadow: rgba(0,0,0,0.3);
+    /* Specific datetime text colors in time.css */
+    --error-text: #f8d7da;
+    --error-bg: #521c24;  
+    --error-border: #721c24;
+    --link-color: var(--accent-color);
+    --link-hover-color: var(--accent-color-hover);
+    --scrollbar-thumb-bg: #555;
+    --scrollbar-track-bg: var(--page-bg);
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {width: 8px; height: 8px;}
+::-webkit-scrollbar-track {background: var(--scrollbar-track-bg);}
+::-webkit-scrollbar-thumb {background: var(--scrollbar-thumb-bg); border-radius: 10px;}
+::-webkit-scrollbar-thumb:hover {background: var(--text-color-secondary);}
+
+/* --- Theme Toggle Button --- */
+#theme-toggle-container {position: fixed; top: 15px; left: 20px; z-index: 1010;}
+#themeToggleButton {background-color: var(--widget-bg); color: var(--text-color-secondary); border: 1px solid var(--widget-border-light); border-radius: 50%; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px var(--widget-shadow); transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;}
+#themeToggleButton:hover {background-color: var(--page-bg); transform: translateY(-1px);}
+
+/* --- Dashboard & Global Elements --- */
+#dashboard {padding: 25px; display: flex; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box; padding-top: 70px;}
+#page-datetime-display {position: fixed; top: 15px; right: 20px; text-align: right; z-index: 1005; padding: 8px 12px; background-color: var(--datetime-bg); border-radius: 8px; box-shadow: 0 2px 5px var(--datetime-shadow); display: flex; align-items: center;}
+#dashboard > h1 {color: var(--text-color-primary); text-align: center; width: 100%; margin-bottom: 25px; font-size: 2.8em; font-weight: 300;}
+
+/* Google Search Bar Styles */
+#search-bar-container {width: 100%; max-width: 600px; margin: 15px auto 35px auto; display: flex;}
+#googleSearchForm {display: flex; width: 100%; border: 1px solid var(--input-border-color); border-radius: 24px; overflow: hidden; background-color: var(--input-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
+body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
+#googleSearchInput {flex-grow: 1; border: none; padding: 12px 20px; font-size: 1em; background-color: transparent; color: var(--input-text); outline: none;}
+#googleSearchInput::placeholder {color: var(--text-color-subtle);}
+#googleSearchBtn {background-color: transparent; border: none; padding: 0 15px 0 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-color-secondary);}
+#googleSearchBtn:hover {color: var(--accent-color);}
+#googleSearchBtn svg {width: 18px; height: 18px;}
+
+/* Widget Grid Layout */
+.widget-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(250px, 1fr));
+    gap: 25px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Individual Widget Styling (General Container) */
+.widget-grid > .widget-container { 
+    background-color: var(--widget-bg);
+    color: var(--text-color-primary);
+    padding: 20px 22px;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px var(--widget-shadow);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--widget-border-light);
+    height: 50vh;
+    min-height: 300px;
+    max-height: 600px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Widget Headers */
+.widget-container h2 {
+    display: flex;
+    align-items: center;
+    margin: -20px -22px 15px -22px;
+    padding: 20px 22px 10px;
+    font-size: 1.05em;
+    color: var(--widget-header-text);
+    border-bottom: 1px solid var(--widget-border-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    position: sticky;
+    top: -20px;
+    background: var(--widget-bg);
+    z-index: 2;
+    flex-shrink: 0;
+}
+
+/* Widget Content Area - Base Styles */
+.widget-container > div[id$="-widget"] {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0 -22px;
+    padding: 0 22px;
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    max-height: calc(100% - 50px); /* Adjusted to account for header */
+}
+
+/* List-based Widgets (News, Events, TopSites) */
+#news-widget,
+#events-widget,
+#topsites-widget {
+    display: block !important; /* Override the flex display */
+    padding-right: 12px !important; /* Make room for scrollbar */
+}
+
+#news-widget ul,
+#events-widget ul,
+#topsites-widget ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    width: 100%;
+}
+
+/* Ensure list items don't collapse */
+#news-widget li,
+#events-widget li,
+#topsites-widget li {
+    flex-shrink: 0;
+}
+
+/* Scrollbar Styling */
+.widget-container *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.widget-container *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-bg);
+    border-radius: 4px;
+}
+
+.widget-container *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-bg);
+    border-radius: 4px;
+}
+
+.widget-container *::-webkit-scrollbar-thumb:hover {
+    background: var(--text-color-secondary);
+}
+
+.drag-handle-icon {cursor: grab; font-size: 1.4em; padding-right: 10px; color: var(--text-color-subtle); line-height: 1; align-self: center;}
+.drag-handle-icon:active { cursor: grabbing; }
+.widget-title-text {flex-grow: 1; text-align: center; margin-right: auto;}
+.widget-header-control {margin-left: 8px; font-size: 0.8em; padding: 4px 6px; flex-shrink: 0; background-color: transparent; border: 1px solid transparent; border-radius:4px;}
+.widget-date-input.widget-header-control {border: 1px solid var(--input-border-color); background-color: var(--input-bg); color: var(--input-text); max-width: 130px;}
+.widget-settings-btn.widget-header-control, .widget-add-btn.widget-header-control {font-size: 1.2em; color: var(--text-color-subtle); cursor: pointer; padding: 0 5px; border: none; background: none; line-height: 1;}
+.widget-settings-btn.widget-header-control:hover, .widget-add-btn.widget-header-control:hover {color: var(--accent-color);}
+.widget-container h2 > .widget-header-control + .widget-header-control {margin-left: 5px;}
+
+.widget-container p {font-size: 0.95em; line-height: 1.65; margin-bottom: 8px; color: var(--text-color-secondary);}
+.widget-container p:last-child { margin-bottom: 0; }
+
+/* --- Generic Modal Styles --- */
+.modal-overlay {position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s linear 0.3s;}
+.modal-overlay.active {opacity: 1; visibility: visible; transition: opacity 0.3s ease;}
+.modal-content-wrapper {background-color: var(--widget-bg); color: var(--text-color-primary); padding: 25px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 500px; max-height: 80vh; display: flex; flex-direction: column; position: relative; transform: translateY(-20px) scale(0.95); transition: transform 0.3s ease-out;}
+.modal-overlay.active .modal-content-wrapper {transform: translateY(0) scale(1);}
+.modal-header {display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--widget-border-light); padding-bottom: 15px; margin-bottom: 20px;}
+.modal-header h3 {margin: 0; font-size: 1.3em; color: var(--widget-header-text);}
+.modal-close-btn {background: none; border: none; font-size: 1.8em; color: var(--text-color-subtle); cursor: pointer; padding: 0 5px; line-height: 1;}
+.modal-close-btn:hover {color: var(--text-color-primary);}
+.modal-body {overflow-y: auto; flex-grow: 1;}
+.modal-body ul {list-style: none; padding: 0; margin: 0;}
+.modal-body li {display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--widget-border-light); font-size: 0.9em;}
+.modal-body li:last-child {border-bottom: none;}
+.modal-body li .item-text {color: var(--text-color-secondary); word-break: break-all; margin-right: 10px; flex-grow: 1;}
+.modal-body li button.action-btn {font-size: 0.8em; padding: 4px 10px; background-color: var(--button-secondary-bg); color: var(--button-secondary-text); border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;}
+.modal-body li button.action-btn:hover {background-color: var(--button-secondary-hover-bg);}
+.modal-body label {display: block; margin-top: 10px; margin-bottom: 5px; font-weight: 500; color: var(--text-color-secondary);}
+.modal-body form.modal-form div { margin-bottom: 10px; } 
+.modal-body form.modal-form input[type="text"], .modal-body form.modal-form input[type="url"], .modal-body select, .modal-body input[type="number"] {width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 0; background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border-color); border-radius: 4px; font-size: 0.9em;}
+.modal-body button.modal-save-btn, .modal-body form.modal-form button[type="submit"] {display: block; margin-top: 15px; padding: 8px 15px; float: right; background-color: var(--button-primary-bg); color: var(--button-primary-text); border:none; border-radius:4px;}
+.modal-body button.modal-save-btn:hover, .modal-body form.modal-form button[type="submit"]:hover { background-color: var(--button-primary-hover-bg); }
+
+/* Error Message Styling */
+.error-message {color: var(--error-text); background-color: var(--error-bg); border: 1px solid var(--error-border); padding: 15px 20px; border-radius: 8px; margin-top: 30px; text-align: center; width: 100%; max-width: 650px; box-sizing: border-box; font-size: 0.95em;}
+/* Settings Button on New Tab Page */
+#openOptionsPageBtn {position: fixed; bottom: 25px; right: 25px; padding: 12px 18px; background-color: var(--button-secondary-bg); color: var(--button-secondary-text); border: none; border-radius: 50px; cursor: pointer; font-size: 1em; font-weight: 500; box-shadow: 0 4px 10px var(--widget-shadow); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: background-color 0.3s ease, transform 0.1s ease-in-out;}
+#openOptionsPageBtn:hover {background-color: var(--button-secondary-hover-bg); transform: translateY(-2px);}
+#openOptionsPageBtn:active {transform: translateY(-1px);}
+/* SortableJS Draggable Widget Styles */
+.widget-sortable-ghost {opacity: 0.4; background: #e0eaff; border: 2px dashed var(--accent-color); border-radius: 12px;}
+.widget-sortable-chosen { /* opacity: 0.9; */ }

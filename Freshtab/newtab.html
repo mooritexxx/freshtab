@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/widgets/time.css">
+    <link rel="stylesheet" href="css/widgets/weather.css">
+    <link rel="stylesheet" href="css/widgets/events.css">
+    <link rel="stylesheet" href="css/widgets/news.css">
+    <link rel="stylesheet" href="css/widgets/todo.css">
+    <link rel="stylesheet" href="css/widgets/notes.css">
+    <link rel="stylesheet" href="css/widgets/topsites.css">
+</head>
+<body class=""> <div id="dashboard">
+        <div id="page-datetime-display"></div>
+        <div id="theme-toggle-container">
+            <button id="themeToggleButton" title="Toggle Dark/Light Mode">🌓</button>
+        </div>
+        <h1>Welcome!</h1>
+        <div id="search-bar-container">
+            <form id="googleSearchForm" action="https://www.google.com/search" method="GET">
+                <input type="text" id="googleSearchInput" name="q" placeholder="Search Google" aria-label="Search Google">
+                <button type="submit" id="googleSearchBtn" aria-label="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+        <div class="widget-grid">
+            <div id="weather-widget-container" class="widget-container" style="display: none;">
+                <h2><span class="drag-handle-icon">⠿</span><span class="widget-title-text">Weather & Air Quality</span></h2>
+                <div id="weather-widget">Loading weather...</div>
+            </div>
+            <div id="events-widget-container" class="widget-container" style="display: none;">
+                <h2><span class="drag-handle-icon">⠿</span><span class="widget-title-text">Events</span><input type="date" id="eventDateInput" class="widget-date-input widget-header-control" title="Select date for events"><button id="eventsSettingsBtn" class="widget-settings-btn widget-header-control" title="Events Settings">⚙️</button></h2>
+                <div id="events-widget">Loading events...</div>
+            </div>
+            <div id="news-widget-container" class="widget-container" style="display: none;">
+                <h2><span class="drag-handle-icon">⠿</span><span class="widget-title-text">News</span></h2>
+                <div id="news-widget">Loading news...</div>
+            </div>
+            <div id="todo-widget-container" class="widget-container" style="display: none;">
+                <h2><span class="drag-handle-icon">⠿</span><span class="widget-title-text">To-Do List</span></h2>
+                <div id="todo-widget"><div class="todo-input-area"><input type="text" id="todoInput" placeholder="Add a new task..."><button id="addTodoBtn" title="Add task">+</button></div><ul id="todoListArea" class="todo-list-area"></ul></div>
+            </div>
+            <div id="notes-widget-container" class="widget-container" style="display: none;">
+                <h2><span class="drag-handle-icon">⠿</span><span class="widget-title-text">Quick Notes</span></h2>
+                <div id="notes-widget"><textarea id="quickNotesArea" placeholder="Jot down your thoughts..."></textarea></div>
+            </div>
+            <div id="topsites-widget-container" class="widget-container" style="display: none;">
+                <h2>
+                    <span class="drag-handle-icon">⠿</span>
+                    <span class="widget-title-text">Top Sites / Favorites</span>
+                    <button id="addFavoriteLinkBtn" class="widget-add-btn widget-header-control" title="Add New Favorite Link">+</button> <button id="topSitesSettingsBtn" class="widget-settings-btn widget-header-control" title="Manage Hidden Sites">⚙️</button>
+                </h2>
+                <div id="topsites-widget"></div>
+            </div>
+        </div>
+        <p class="error-message" id="location-error" style="display:none;">Could not get location.</p>
+        <button id="openOptionsPageBtn" title="Open Settings">⚙️ Settings</button>
+    </div>
+    <div id="widgetSettingsModal" class="modal-overlay" style="display: none;"><div class="modal-content-wrapper"><div class="modal-header"><h3 id="modalTitleEl">Widget Settings</h3><button id="modalCloseBtn" class="modal-close-btn" title="Close settings">&times;</button></div><div id="modalBodyEl" class="modal-body"></div></div></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/widgets/timeWidget.js"></script>
+    <script src="js/widgets/weatherWidget.js"></script>
+    <script src="js/widgets/eventsWidget.js"></script>
+    <script src="js/widgets/newsWidget.js"></script>
+    <script src="js/widgets/todoWidget.js"></script>
+    <script src="js/widgets/notesWidget.js"></script>
+    <script src="js/widgets/topSitesWidget.js"></script>
+    <script src="js/lib/Sortable.min.js"></script>
+    <script src="newtab.js"></script> 
+</body>
+</html>

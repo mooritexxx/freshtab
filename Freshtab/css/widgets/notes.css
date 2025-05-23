@@ -1,0 +1,29 @@
+/* css/widgets/notes.css - Styles for the Quick Notes Widget - V2.7 */
+
+/* #notes-widget is a div[id$="-widget"] and gets main scroll/flex properties from main.css,
+   including display:flex, flex-direction:column.
+   It will also get overflow-y:auto from main.css.
+   The textarea child will grow, and textareas have their own native scrollbars.
+*/
+
+#notes-widget #quickNotesArea {
+    width: 100%; 
+    flex-grow: 1; /* Allows textarea to fill the #notes-widget div */
+    min-height: 150px; 
+    padding: 10px; 
+    border: 1px solid var(--input-border-color); 
+    border-radius: 4px;
+    font-family: inherit; 
+    font-size: 0.9em; 
+    line-height: 1.5; 
+    resize: vertical; 
+    box-sizing: border-box;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    /* The textarea itself will have a scrollbar if its content exceeds its size */
+}
+
+#notes-widget #quickNotesArea::placeholder {
+    color: var(--text-color-subtle);
+    font-style: italic;
+}
