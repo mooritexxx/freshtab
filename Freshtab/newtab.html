@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Tab</title>
+    <title>Freshtab</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/widgets/time.css">
     <link rel="stylesheet" href="css/widgets/weather.css">
@@ -13,11 +13,17 @@
     <link rel="stylesheet" href="css/widgets/notes.css">
     <link rel="stylesheet" href="css/widgets/topsites.css">
 </head>
-<body class=""> <div id="dashboard">
-        <div id="page-datetime-display"></div>
+<body class=""> 
+    <div id="dashboard">
         <div id="theme-toggle-container">
             <button id="themeToggleButton" title="Toggle Dark/Light Mode">🌓</button>
         </div>
+
+        <div id="top-right-controls">
+            <div id="page-datetime-display"></div>
+            <button id="openOptionsPageBtn" title="Open Settings">⚙️</button> 
+        </div>
+
         <h1>Welcome!</h1>
         <div id="search-bar-container">
             <form id="googleSearchForm" action="https://www.google.com/search" method="GET">
@@ -60,7 +66,6 @@
             </div>
         </div>
         <p class="error-message" id="location-error" style="display:none;">Could not get location.</p>
-        <button id="openOptionsPageBtn" title="Open Settings">⚙️ Settings</button>
     </div>
     <div id="widgetSettingsModal" class="modal-overlay" style="display: none;"><div class="modal-content-wrapper"><div class="modal-header"><h3 id="modalTitleEl">Widget Settings</h3><button id="modalCloseBtn" class="modal-close-btn" title="Close settings">&times;</button></div><div id="modalBodyEl" class="modal-body"></div></div></div>
 
