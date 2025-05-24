@@ -334,36 +334,60 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
     display: flex; 
     flex-wrap: wrap;
     gap: 20px; 
-    align-items: flex-start; 
+    align-items: center;
     margin-bottom: 12px;
+    width: 100%;
 }
 .modal-body .form-group {
     flex: 1; 
     min-width: 200px;
+    display: flex;
+    flex-direction: column;
 }
 .modal-body .form-group label {
     margin-bottom: 6px;
     font-size: 0.9em;
+    display: block;
 }
 .modal-body .form-group input[type="text"] {
     width: 100%; 
     margin-bottom: 0;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 12px;
 }
 .modal-body .location-input-group {
     display: flex; 
     align-items: center; 
     gap: 5px;
+    width: 100%;
+}
+.modal-body .location-input-group input[type="text"] {
+    flex: 1;
+    min-width: 0;
 }
 .modal-body small { 
     color: var(--text-color-subtle); 
     display: block; 
     margin-top: 8px; 
-    margin-bottom:10px; 
+    margin-bottom: 10px; 
     font-size: 0.85em;
     line-height: 1.4;
+    width: 100%;
+}
+.modal-body .status-placeholder,
+.modal-body #currentLocationStatus { 
+    font-size: 0.85em; 
+    color: var(--text-color-secondary);
+    min-height: 1.4em; 
+    display: block; 
+    margin-top: 5px;
+    width: 100%;
 }
 .modal-body button.small-btn { 
-    padding: 8px; 
+    padding: 0;
+    width: 36px;
+    height: 36px;
     font-size: 1.1em;
     line-height: 1;
     border-radius: 4px;
@@ -371,17 +395,12 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
     background-color: var(--button-secondary-bg);
     color: var(--button-secondary-text);
     transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .modal-body button.small-btn:hover {
     background-color: var(--button-secondary-hover-bg);
-}
-.modal-body #currentLocationStatus,
-.modal-body .status-placeholder { 
-    font-size: 0.85em; 
-    color: var(--text-color-secondary);
-    min-height: 1.4em; 
-    display: block; 
-    margin-top: 5px;
 }
 .modal-body #widgetOrderOptionsContainer { 
     margin-top: 5px;
