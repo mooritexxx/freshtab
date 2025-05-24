@@ -43,8 +43,9 @@ const DEFAULT_WIDGET_ORDER = [
     WIDGET_CONTAINER_IDS.news, WIDGET_CONTAINER_IDS.topSites
 ];
 
+
 // --- Modal Utility Functions ---
-function openModal(title, populateCallback, onCloseCallback) { /* ... (no changes from V2.9) ... */ 
+function openModal(title, populateCallback, onCloseCallback) {
     if (!widgetSettingsModal || !modalTitleEl || !modalBodyEl) { console.error("Modal elements not found!"); return; }
     modalTitleEl.textContent = title; modalBodyEl.innerHTML = ''; 
     if (typeof populateCallback === 'function') populateCallback(modalBodyEl); 
@@ -52,37 +53,223 @@ function openModal(title, populateCallback, onCloseCallback) { /* ... (no change
     widgetSettingsModal.style.display = 'flex'; setTimeout(() => { widgetSettingsModal.classList.add('active'); }, 10);
     currentModalCloseCallback = onCloseCallback;
 }
-function closeModal() { /* ... (no changes from V2.9) ... */ 
+function closeModal() {
     if (!widgetSettingsModal) return; widgetSettingsModal.classList.remove('active');
     setTimeout(() => { widgetSettingsModal.style.display = 'none'; if(modalBodyEl) modalBodyEl.innerHTML = ''; if (typeof currentModalCloseCallback === 'function') { currentModalCloseCallback(); currentModalCloseCallback = null; } }, 300);
 }
 
+
 // --- Theme Function ---
-function applyTheme(isDarkMode) { /* ... (no changes from V2.5) ... */ 
+function applyTheme(isDarkMode) {
     if (isDarkMode) { document.body.classList.add('dark-mode'); if (themeToggleButton) themeToggleButton.textContent = '☀️'; } 
     else { document.body.classList.remove('dark-mode'); if (themeToggleButton) themeToggleButton.textContent = '🌓'; }
 }
+
+
 // --- Location Utility ---
-function getUserLocation() { /* ... (no changes from V2.5) ... */ 
+function getUserLocation() {
     return new Promise((resolve, reject) => { if (navigator.geolocation) { navigator.geolocation.getCurrentPosition( (position) => { resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }); }, (error) => { console.error("getUserLocation: Error:", error.message, error.code); reject(error); }, { timeout: 10000 } ); } else { reject(new Error("Geolocation is not supported.")); } });
 }
 // --- Geocoding Helper ---
-async function geocodeCityName(cityName, apiKey) { /* ... (no changes from V2.5) ... */ 
+async function geocodeCityName(cityName, apiKey) {
     if (!cityName) return null; try { const geocodeUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${apiKey}`; const response = await fetch(geocodeUrl); if (!response.ok) { const errorData = await response.json().catch(() => null); console.error("Geocoding API error:", errorData ? errorData.message : response.status); return null; } const data = await response.json(); if (data && data.length > 0) { return { latitude: data[0].lat, longitude: data[0].lon, name: `${data[0].name}${data[0].country ? ', ' + data[0].country : ''}` }; } else { console.warn("Geocoding: No results for", cityName); return null; } } catch (error) { console.error("Geocoding city error:", error); return null; }
 }
+
+
 // --- Widget Container Display Logic ---
 function showWidget(id) { const el = document.getElementById(id); if (el) el.style.display = 'block';}
 function hideWidget(id) { const el = document.getElementById(id); if (el) el.style.display = 'none';}
 function displayLocationError(msg="Could not get location.") { 
     if(locationErrorDiv) { locationErrorDiv.textContent = msg; locationErrorDiv.style.display = 'block';} 
-    const locationDependentKeys = ['weather', 'events', 'news']; // Keys from WIDGET_CONTAINER_IDS
+    const locationDependentKeys = ['weather', 'events', 'news'];
     locationDependentKeys.forEach(key => {
         if (WIDGET_CONTAINER_IDS[key]) hideWidget(WIDGET_CONTAINER_IDS[key]);
     });
 }
+
+
 // --- Draggable Widget Order Logic ---
 function applyWidgetOrder(order) { if (!widgetGrid || !order?.length) return; order.forEach(id => { const el = document.getElementById(id); if (el?.parentElement === widgetGrid) widgetGrid.appendChild(el); });}
 function saveWidgetOrder() { if (!widgetGrid) return; const order = Array.from(widgetGrid.children).map(c => c.id).filter(id => Object.values(WIDGET_CONTAINER_IDS).includes(id)); chrome.storage.sync.set({ widgetOrder: order }, () => { if (chrome.runtime.lastError) console.error("Save order error:", chrome.runtime.lastError.message); });}
+
+
+// --- NEW: Settings Modal Logic ---
+const ORDERABLE_WIDGETS = {
+    weather: "Weather & Air Quality", 
+    events: "Events",
+    news: "News",
+    todo: "To-Do List",
+    notes: "Quick Notes",
+    topSites: "Top Sites / Favorites" 
+};
+
+function populateSettingsModal(modalBody) {
+    chrome.storage.sync.get(['userName', 'manualLocation', 'widgetSettings', 'widgetOrder'], (data) => {
+        const { userName, manualLocation, widgetSettings, widgetOrder } = data;
+        
+        modalBody.innerHTML = `
+            <div class="option-section">
+                <h3 class="section-title">User & Location</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userNameInput">Your First Name:</label>
+                        <input type="text" id="userNameInput" placeholder="Enter name for greeting" value="${userName || ''}">
+                        <small>Used in the welcome message.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="manualLocation">Primary Location (for widgets):</label>
+                        <div class="location-input-group">
+                            <input type="text" id="manualLocation" placeholder="e.g., City, Country" value="${manualLocation?.name || ''}">
+                            <button id="useCurrentLocationBtn" class="small-btn" title="Use current location">📍 Use Current</button>
+                        </div>
+                        <span id="currentLocationStatus"></span>
+                        <small>Overrides browser location if set.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="option-section">
+                <h3 class="section-title">Widget Visibility & Order</h3>
+                <small>Check to show a widget. Drag to reorder them on your new tab page.</small>
+                <div id="widgetOrderOptionsContainer"></div>
+            </div>
+
+            <button class="settings-save-button">Save Settings</button>
+            <div id="settings-status"></div>
+        `;
+
+        // Populate widget order/visibility
+        const widgetOrderContainer = modalBody.querySelector('#widgetOrderOptionsContainer');
+        const loadedSettings = { ...defaultWidgetSettings, ...(widgetSettings || {}) };
+        
+        let orderKeysToUse = Object.keys(ORDERABLE_WIDGETS); 
+        if (widgetOrder && Array.isArray(widgetOrder) && widgetOrder.length > 0) {
+            const savedContainerIds = widgetOrder;
+            const validOrderedKeys = []; const knownOrderableKeys = Object.keys(ORDERABLE_WIDGETS);
+            savedContainerIds.forEach(containerId => {
+                const key = containerId.replace('-widget-container', '');
+                if (knownOrderableKeys.includes(key) && !validOrderedKeys.includes(key)) validOrderedKeys.push(key);
+            });
+            knownOrderableKeys.forEach(key => { if (!validOrderedKeys.includes(key)) validOrderedKeys.push(key); });
+            orderKeysToUse = validOrderedKeys;
+        }
+
+        orderKeysToUse.forEach(widgetKey => {
+            if (ORDERABLE_WIDGETS.hasOwnProperty(widgetKey)) {
+                const widgetDisplayName = ORDERABLE_WIDGETS[widgetKey];
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'widget-order-item';
+                itemDiv.dataset.widgetKey = widgetKey; 
+                const isChecked = loadedSettings[widgetKey];
+                itemDiv.innerHTML = `
+                    <span class="widget-order-drag-handle">⠿</span>
+                    <label>
+                        <input type="checkbox" name="${widgetKey}" ${isChecked ? 'checked' : ''}>
+                        ${widgetDisplayName}
+                    </label>
+                `;
+                widgetOrderContainer.appendChild(itemDiv);
+            }
+        });
+
+        // Make the list sortable
+        if (typeof Sortable !== 'undefined') {
+            new Sortable(widgetOrderContainer, { animation: 150, handle: '.widget-order-drag-handle', ghostClass: 'widget-order-ghost'});
+        }
+
+        // Add event listeners for modal buttons
+        attachSettingsModalListeners(modalBody);
+    });
+}
+
+function attachSettingsModalListeners(modalBody) {
+    const saveButton = modalBody.querySelector('.settings-save-button');
+    const useCurrentLocationBtn = modalBody.querySelector('#useCurrentLocationBtn');
+
+    if (saveButton) {
+        saveButton.addEventListener('click', saveSettingsFromModal);
+    }
+
+    if (useCurrentLocationBtn) {
+        useCurrentLocationBtn.addEventListener('click', async () => {
+            const manualLocationInput = modalBody.querySelector('#manualLocation');
+            const statusSpan = modalBody.querySelector('#currentLocationStatus');
+            
+            if (!navigator.geolocation) { statusSpan.textContent = 'Geolocation not supported.'; return; }
+            statusSpan.textContent = 'Fetching...';
+            useCurrentLocationBtn.disabled = true;
+
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+                });
+                const { latitude, longitude } = position.coords;
+                statusSpan.textContent = 'Coordinates found...';
+                
+                const geoUrl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${OPENWEATHERMAP_API_KEY}`;
+                const response = await fetch(geoUrl);
+                if (!response.ok) throw new Error('Reverse geocoding failed.');
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const locName = data[0].name || "";
+                    const country = data[0].country || "";
+                    manualLocationInput.value = country ? `${locName}, ${country}` : locName;
+                    statusSpan.textContent = 'Location filled!';
+                } else {
+                    throw new Error('Could not determine city from coordinates.');
+                }
+            } catch (error) {
+                console.error('Geolocation/Geocoding error:', error);
+                statusSpan.textContent = `Error: ${error.message}`;
+            } finally {
+                useCurrentLocationBtn.disabled = false;
+            }
+        });
+    }
+}
+
+function saveSettingsFromModal() {
+    const modalBody = document.getElementById('modalBodyEl');
+    if (!modalBody) return;
+
+    const statusDiv = modalBody.querySelector('#settings-status');
+    const userNameValue = modalBody.querySelector('#userNameInput').value.trim();
+    const manualLocationValue = modalBody.querySelector('#manualLocation').value.trim();
+
+    const newWidgetSettings = {};
+    const newWidgetOrderContainerIds = [];
+    const orderedWidgetItems = modalBody.querySelectorAll('.widget-order-item');
+
+    orderedWidgetItems.forEach(item => {
+        const key = item.dataset.widgetKey;
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (key && checkbox) {
+            newWidgetSettings[key] = checkbox.checked;
+            newWidgetOrderContainerIds.push(`${key}-widget-container`);
+        }
+    });
+
+    const dataToSave = {
+        userName: userNameValue,
+        widgetSettings: newWidgetSettings,
+        widgetOrder: newWidgetOrderContainerIds,
+        manualLocation: manualLocationValue ? { name: manualLocationValue } : null
+    };
+
+    statusDiv.textContent = 'Saving...';
+    chrome.storage.sync.set(dataToSave, () => {
+        if (chrome.runtime.lastError) {
+            statusDiv.textContent = `Error: ${chrome.runtime.lastError.message}`;
+        } else {
+            statusDiv.textContent = 'Settings saved! Reloading...';
+            setTimeout(() => {
+                location.reload();
+            }, 750);
+        }
+    });
+}
+
 
 // --- Main Initialization Logic ---
 async function initializeDashboard() {
@@ -110,9 +297,9 @@ async function initializeDashboard() {
             } catch (error) { displayLocationError(error.message); }
         }
         
-        const activeWidgetKeys = {}; // Example: { weather: true, events: false, ... }
+        const activeWidgetKeys = {};
         Object.keys(WIDGET_CONTAINER_IDS).forEach(key => {
-            activeWidgetKeys[key] = !!currentWidgetSettings[key]; // Ensure boolean
+            activeWidgetKeys[key] = !!currentWidgetSettings[key];
         });
 
         Object.keys(WIDGET_CONTAINER_IDS).forEach(key => {
@@ -155,7 +342,14 @@ async function initializeDashboard() {
 
 document.addEventListener('DOMContentLoaded', () => { 
     initializeDashboard();
-    if (openOptionsPageBtn) openOptionsPageBtn.addEventListener('click', () => { window.location.href = chrome.runtime.getURL('options.html'); });
+    
+    // Updated listener to open settings modal
+    if (openOptionsPageBtn) {
+        openOptionsPageBtn.addEventListener('click', () => {
+            openModal("Freshtab Settings", populateSettingsModal);
+        });
+    }
+
     if (themeToggleButton) themeToggleButton.addEventListener('click', () => { const iDM = document.body.classList.toggle('dark-mode'); applyTheme(iDM); chrome.storage.sync.set({ darkModeEnabled: iDM }); });
     if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
     if (widgetSettingsModal) {
