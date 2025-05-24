@@ -248,13 +248,13 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
 /* --- Generic Modal Styles --- */
 .modal-overlay {position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s linear 0.3s;}
 .modal-overlay.active {opacity: 1; visibility: visible; transition: opacity 0.3s ease;}
-.modal-content-wrapper {background-color: var(--widget-bg); color: var(--text-color-primary); padding: 25px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 500px; max-height: 80vh; display: flex; flex-direction: column; position: relative; transform: translateY(-20px) scale(0.95); transition: transform 0.3s ease-out;}
+.modal-content-wrapper {background-color: var(--widget-bg); color: var(--text-color-primary); padding: 25px 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); width: 90%; max-width: 550px; max-height: 80vh; display: flex; flex-direction: column; position: relative; transform: translateY(-20px) scale(0.95); transition: transform 0.3s ease-out;}
 .modal-overlay.active .modal-content-wrapper {transform: translateY(0) scale(1);}
-.modal-header {display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--widget-border-light); padding-bottom: 15px; margin-bottom: 20px;}
+.modal-header {display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--widget-border-light); padding-bottom: 15px; margin: -25px -30px 20px -30px; padding: 15px 30px;}
 .modal-header h3 {margin: 0; font-size: 1.3em; color: var(--widget-header-text);}
 .modal-close-btn {background: none; border: none; font-size: 1.8em; color: var(--text-color-subtle); cursor: pointer; padding: 0 5px; line-height: 1;}
 .modal-close-btn:hover {color: var(--text-color-primary);}
-.modal-body {overflow-y: auto; flex-grow: 1;}
+.modal-body {overflow-y: auto; flex-grow: 1; margin: 0 -15px; padding: 0 15px;}
 .modal-body ul {list-style: none; padding: 0; margin: 0;}
 .modal-body li {display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--widget-border-light); font-size: 0.9em;}
 .modal-body li:last-child {border-bottom: none;}
@@ -301,34 +301,49 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
 .widget-sortable-chosen { /* opacity: 0.9; */ }
 
 
-/* --- NEW: Styles for Settings Modal Content --- */
-.modal-body .option-section { 
-    margin-bottom: 25px; 
-    padding-bottom: 20px; 
-    border-bottom: 1px solid var(--widget-border-light); 
+/* --- Styles for Settings Modal with Tabs --- */
+.modal-body .settings-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--widget-border-light);
+    margin: 0 -15px 15px -15px; /* Extend border to edges */
+    padding: 0 15px;
 }
-.modal-body .option-section:last-of-type { 
-    border-bottom: none; 
-    padding-bottom: 0; 
+.modal-body .tab-link {
+    padding: 10px 15px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-color-subtle);
+    font-size: 1em;
+    font-weight: 500;
+    margin-bottom: -1px; /* Overlap the container's border */
 }
-.modal-body .section-title { /* Changed from h2 to a class */
-    font-size: 1.1em; 
-    margin-bottom: 15px; 
-    color: var(--text-color-primary);
-    font-weight: 600;
+.modal-body .tab-link.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+.modal-body .tab-content {
+    display: none;
+    padding-top: 10px;
+}
+.modal-body .tab-content.active {
+    display: block;
 }
 .modal-body .form-row {
     display: flex; 
+    flex-wrap: wrap;
     gap: 20px; 
     align-items: flex-start; 
     margin-bottom: 12px;
 }
 .modal-body .form-group {
     flex: 1; 
-    min-width: 0;
+    min-width: 200px;
 }
 .modal-body .form-group label {
     margin-bottom: 6px;
+    font-size: 0.9em;
 }
 .modal-body .form-group input[type="text"] {
     width: 100%; 
@@ -337,55 +352,60 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
 .modal-body .location-input-group {
     display: flex; 
     align-items: center; 
-    gap: 10px;
-}
-.modal-body .location-input-group input[type="text"] { 
-    flex-grow: 1; 
-    margin-bottom: 0; 
+    gap: 5px;
 }
 .modal-body small { 
     color: var(--text-color-subtle); 
     display: block; 
-    margin-top: 5px; 
+    margin-top: 8px; 
     margin-bottom:10px; 
     font-size: 0.85em;
+    line-height: 1.4;
 }
 .modal-body button.small-btn { 
-    padding: 8px 12px; 
-    font-size: 0.9em; 
-    white-space: nowrap;
+    padding: 8px; 
+    font-size: 1.1em;
+    line-height: 1;
+    border-radius: 4px;
+    border: none;
     background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+    transition: background-color 0.2s ease;
 }
 .modal-body button.small-btn:hover {
     background-color: var(--button-secondary-hover-bg);
 }
-.modal-body #currentLocationStatus { 
+.modal-body #currentLocationStatus,
+.modal-body .status-placeholder { 
     font-size: 0.85em; 
     color: var(--text-color-secondary);
-    min-height: 1em; 
+    min-height: 1.4em; 
     display: block; 
     margin-top: 5px;
 }
 .modal-body #widgetOrderOptionsContainer { 
+    margin-top: 5px;
     margin-bottom: 15px; 
 }
 .modal-body .widget-order-item {
-    background-color: var(--page-bg); 
-    padding: 10px 15px; 
-    border: 1px solid var(--widget-border-light); 
-    border-radius: 4px; 
-    margin-bottom: 8px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
+    background-color: transparent;
+    padding: 8px 5px; 
+    border: none;
+    border-bottom: 1px solid var(--widget-border-light);
+    border-radius: 0; 
+    margin-bottom: 0; 
     cursor: grab;
+}
+.modal-body .widget-order-item:last-child {
+    border-bottom: none;
 }
 .modal-body .widget-order-item:active { 
     cursor: grabbing; 
+    background-color: var(--page-bg);
 }
 .modal-body .widget-order-drag-handle { 
-    font-size: 1.2em; 
-    margin-right: 10px; 
+    font-size: 1.4em; 
+    margin-right: 15px; 
     color: var(--text-color-subtle);
 }
 .modal-body .widget-order-item label { 
@@ -394,22 +414,28 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
     display: flex; 
     align-items: center; 
     flex-grow: 1;
+    font-size: 0.95em;
 }
 .modal-body .widget-order-item input[type="checkbox"] { 
-    margin-right: 10px; 
-    width: 17px; 
-    height: 17px;
+    margin-right: 15px; 
+    width: 18px; 
+    height: 18px;
     accent-color: var(--accent-color);
+    flex-shrink: 0;
 }
 .modal-body .widget-order-ghost { 
-    opacity: 0.4; 
-    background: var(--accent-color-hover);
+    opacity: 0.5; 
+    background: var(--accent-color);
+}
+.modal-footer {
+    margin-top: auto; /* Pushes footer to the bottom */
+    padding-top: 20px;
+    border-top: 1px solid var(--widget-border-light);
 }
 .modal-body .settings-save-button {
     display: block;
     width: 100%;
     padding: 10px 25px;
-    margin-top: 10px;
     font-size: 1.05em;
     font-weight: bold;
     background-color: var(--button-primary-bg);
@@ -417,6 +443,7 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.2s;
 }
 .modal-body .settings-save-button:hover {
     background-color: var(--button-primary-hover-bg);

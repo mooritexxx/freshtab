@@ -93,7 +93,7 @@ function applyWidgetOrder(order) { if (!widgetGrid || !order?.length) return; or
 function saveWidgetOrder() { if (!widgetGrid) return; const order = Array.from(widgetGrid.children).map(c => c.id).filter(id => Object.values(WIDGET_CONTAINER_IDS).includes(id)); chrome.storage.sync.set({ widgetOrder: order }, () => { if (chrome.runtime.lastError) console.error("Save order error:", chrome.runtime.lastError.message); });}
 
 
-// --- NEW: Settings Modal Logic ---
+// --- Settings Modal Logic (with TABS) ---
 const ORDERABLE_WIDGETS = {
     weather: "Weather & Air Quality", 
     events: "Events",
@@ -107,38 +107,45 @@ function populateSettingsModal(modalBody) {
     chrome.storage.sync.get(['userName', 'manualLocation', 'widgetSettings', 'widgetOrder'], (data) => {
         const { userName, manualLocation, widgetSettings, widgetOrder } = data;
         
+        // Main modal structure with tabs
         modalBody.innerHTML = `
-            <div class="option-section">
-                <h3 class="section-title">User & Location</h3>
+            <div class="settings-tabs">
+                <button class="tab-link active" data-tab="general-settings">General</button>
+                <button class="tab-link" data-tab="widget-settings">Widgets</button>
+            </div>
+
+            <div id="general-settings" class="tab-content active">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="userNameInput">Your First Name:</label>
                         <input type="text" id="userNameInput" placeholder="Enter name for greeting" value="${userName || ''}">
+                        <span class="status-placeholder"></span>
                         <small>Used in the welcome message.</small>
                     </div>
                     <div class="form-group">
-                        <label for="manualLocation">Primary Location (for widgets):</label>
+                        <label for="manualLocation">Primary Location:</label>
                         <div class="location-input-group">
                             <input type="text" id="manualLocation" placeholder="e.g., City, Country" value="${manualLocation?.name || ''}">
-                            <button id="useCurrentLocationBtn" class="small-btn" title="Use current location">📍 Use Current</button>
+                            <button id="useCurrentLocationBtn" class="small-btn" title="Use current location">📍</button>
                         </div>
                         <span id="currentLocationStatus"></span>
-                        <small>Overrides browser location if set.</small>
+                        <small>Used for Weather, Events, and News widgets.</small>
                     </div>
                 </div>
             </div>
 
-            <div class="option-section">
-                <h3 class="section-title">Widget Visibility & Order</h3>
-                <small>Check to show a widget. Drag to reorder them on your new tab page.</small>
+            <div id="widget-settings" class="tab-content">
+                <p><small>Check to show a widget. Drag and drop to reorder.</small></p>
                 <div id="widgetOrderOptionsContainer"></div>
             </div>
 
-            <button class="settings-save-button">Save Settings</button>
-            <div id="settings-status"></div>
+            <div class="modal-footer">
+                <button class="settings-save-button">Save Settings</button>
+                <div id="settings-status"></div>
+            </div>
         `;
 
-        // Populate widget order/visibility
+        // Populate widget order/visibility in the "Widgets" tab
         const widgetOrderContainer = modalBody.querySelector('#widgetOrderOptionsContainer');
         const loadedSettings = { ...defaultWidgetSettings, ...(widgetSettings || {}) };
         
@@ -162,9 +169,9 @@ function populateSettingsModal(modalBody) {
                 itemDiv.dataset.widgetKey = widgetKey; 
                 const isChecked = loadedSettings[widgetKey];
                 itemDiv.innerHTML = `
-                    <span class="widget-order-drag-handle">⠿</span>
                     <label>
                         <input type="checkbox" name="${widgetKey}" ${isChecked ? 'checked' : ''}>
+                        <span class="widget-order-drag-handle">⠿</span>
                         ${widgetDisplayName}
                     </label>
                 `;
@@ -177,7 +184,7 @@ function populateSettingsModal(modalBody) {
             new Sortable(widgetOrderContainer, { animation: 150, handle: '.widget-order-drag-handle', ghostClass: 'widget-order-ghost'});
         }
 
-        // Add event listeners for modal buttons
+        // Add event listeners for modal buttons and tabs
         attachSettingsModalListeners(modalBody);
     });
 }
@@ -185,6 +192,7 @@ function populateSettingsModal(modalBody) {
 function attachSettingsModalListeners(modalBody) {
     const saveButton = modalBody.querySelector('.settings-save-button');
     const useCurrentLocationBtn = modalBody.querySelector('#useCurrentLocationBtn');
+    const tabLinks = modalBody.querySelectorAll('.tab-link');
 
     if (saveButton) {
         saveButton.addEventListener('click', saveSettingsFromModal);
@@ -227,6 +235,19 @@ function attachSettingsModalListeners(modalBody) {
             }
         });
     }
+
+    // Tab switching logic
+    tabLinks.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.dataset.tab;
+            
+            modalBody.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+            modalBody.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            modalBody.querySelector(`#${tabId}`).classList.add('active');
+        });
+    });
 }
 
 function saveSettingsFromModal() {
