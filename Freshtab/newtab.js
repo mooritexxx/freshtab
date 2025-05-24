@@ -30,12 +30,12 @@ let currentModalCloseCallback = null;
 
 // Widget Configuration
 const WIDGET_CONFIG = {
-    weather: { id: 'weather-widget-container', title: 'Weather & Air Quality', order: 1 },
-    events: { id: 'events-widget-container', title: 'Events', order: 2 },
-    news: { id: 'news-widget-container', title: 'News', order: 3 },
-    todo: { id: 'todo-widget-container', title: 'To-Do List', order: 4 },
-    notes: { id: 'notes-widget-container', title: 'Quick Notes', order: 5 },
-    topSites: { id: 'topsites-widget-container', title: 'Top Sites / Favorites', order: 6 }
+    weather: { id: 'weather-widget-container', title: 'Weather & Air Quality', order: 1, priority: 'high' },
+    events: { id: 'events-widget-container', title: 'Events', order: 2, priority: 'medium' },
+    news: { id: 'news-widget-container', title: 'News', order: 3, priority: 'medium' },
+    todo: { id: 'todo-widget-container', title: 'To-Do List', order: 4, priority: 'high' },
+    notes: { id: 'notes-widget-container', title: 'Quick Notes', order: 5, priority: 'high' },
+    topSites: { id: 'topsites-widget-container', title: 'Top Sites / Favorites', order: 6, priority: 'high' }
 };
 
 // Default settings
@@ -411,8 +411,113 @@ function attachSettingsModalListeners(modalBody) {
     });
 }
 
+// Performance optimization utilities
+const PerformanceManager = {
+    initialized: new Set(),
+    observer: null,
+    
+    async initializeWidget(widgetKey, effectiveLocation = null) {
+        if (this.initialized.has(widgetKey)) return;
+        
+        const widget = WIDGET_CONFIG[widgetKey];
+        if (!widget) return;
 
-// --- Main Initialization Logic ---
+        try {
+            let initPromise = null;
+            
+            // Initialize based on widget type
+            switch (widgetKey) {
+                case 'weather':
+                    if (effectiveLocation && typeof WeatherWidget?.init === 'function') {
+                        initPromise = WeatherWidget.init(effectiveLocation, OPENWEATHERMAP_API_KEY, widgetSettings);
+                    }
+                    break;
+                case 'events':
+                    if (effectiveLocation && typeof EventsWidget?.init === 'function') {
+                        initPromise = EventsWidget.init(effectiveLocation, TICKETMASTER_API_KEY);
+                    }
+                    break;
+                case 'news':
+                    if (effectiveLocation && typeof NewsWidget?.init === 'function') {
+                        initPromise = NewsWidget.init(effectiveLocation, GNEWS_API_KEY);
+                    }
+                    break;
+                case 'todo':
+                    if (typeof TodoWidget?.init === 'function') {
+                        initPromise = TodoWidget.init();
+                    }
+                    break;
+                case 'notes':
+                    if (typeof NotesWidget?.init === 'function') {
+                        initPromise = NotesWidget.init();
+                    }
+                    break;
+                case 'topSites':
+                    if (typeof TopSitesWidget?.init === 'function') {
+                        initPromise = TopSitesWidget.init();
+                    }
+                    break;
+            }
+
+            if (initPromise) {
+                await initPromise;
+                this.initialized.add(widgetKey);
+                console.log(`Widget ${widgetKey} initialized`);
+            }
+        } catch (error) {
+            console.error(`Error initializing widget ${widgetKey}:`, error);
+        }
+    },
+
+    setupIntersectionObserver(effectiveLocation) {
+        if (this.observer) {
+            this.observer.disconnect();
+        }
+
+        this.observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const widgetKey = Object.entries(WIDGET_CONFIG)
+                        .find(([_, config]) => config.id === entry.target.id)?.[0];
+                    
+                    if (widgetKey) {
+                        this.initializeWidget(widgetKey, effectiveLocation);
+                        // Stop observing after initialization
+                        this.observer.unobserve(entry.target);
+                    }
+                }
+            });
+        }, {
+            rootMargin: '50px', // Start loading when widget is 50px from viewport
+            threshold: 0.1 // Trigger when at least 10% of the widget is visible
+        });
+    },
+
+    observeWidgets() {
+        if (!this.observer) return;
+        
+        // Start observing all widget containers
+        Object.entries(WIDGET_CONFIG).forEach(([key, config]) => {
+            const widget = document.getElementById(config.id);
+            if (widget && !this.initialized.has(key)) {
+                this.observer.observe(widget);
+            }
+        });
+    },
+
+    // Initialize high priority widgets immediately
+    async initializeHighPriorityWidgets(effectiveLocation) {
+        const highPriorityWidgets = Object.entries(WIDGET_CONFIG)
+            .filter(([_, config]) => config.priority === 'high')
+            .map(([key]) => key);
+
+        await Promise.all(
+            highPriorityWidgets.map(key => this.initializeWidget(key, effectiveLocation))
+        );
+    }
+};
+
+// Initialize dashboard with performance optimizations
 async function initializeDashboard() {
     if (typeof TimeWidget?.init === 'function') TimeWidget.init();
     else console.error("TimeWidget missing or not initializable.");
@@ -450,39 +555,21 @@ async function initializeDashboard() {
         // Apply widget order
         applyWidgetOrder(widgetOrder);
 
-        // Initialize widgets
-        const initPromises = [];
+        // Setup performance optimizations
+        PerformanceManager.setupIntersectionObserver(effectiveLocation);
         
-        // Location-dependent widgets
-        if (effectiveLocation) {
-            if (widgetSettings.weather && typeof WeatherWidget?.init === 'function') 
-                initPromises.push(WeatherWidget.init(effectiveLocation, OPENWEATHERMAP_API_KEY, widgetSettings));
-            if (widgetSettings.events && typeof EventsWidget?.init === 'function') 
-                initPromises.push(EventsWidget.init(effectiveLocation, TICKETMASTER_API_KEY));
-            if (widgetSettings.news && typeof NewsWidget?.init === 'function') 
-                initPromises.push(NewsWidget.init(effectiveLocation, GNEWS_API_KEY));
-        }
+        // Initialize high priority widgets immediately
+        await PerformanceManager.initializeHighPriorityWidgets(effectiveLocation);
+        
+        // Start observing other widgets
+        PerformanceManager.observeWidgets();
 
-        // Location-independent widgets
-        if (widgetSettings.todo && typeof TodoWidget?.init === 'function') 
-            initPromises.push(TodoWidget.init());
-        if (widgetSettings.notes && typeof NotesWidget?.init === 'function') 
-            initPromises.push(NotesWidget.init());
-        if (widgetSettings.topSites && typeof TopSitesWidget?.init === 'function') 
-            initPromises.push(TopSitesWidget.init());
-
-        try {
-            await Promise.allSettled(initPromises);
-            
-            // Setup drag and drop for main grid
-            if (widgetGrid) {
-                const drake = dragula([widgetGrid], {
-                    moves: (el, container, handle) => handle.classList.contains('drag-handle-icon')
-                });
-                drake.on('drop', saveWidgetOrder);
-            }
-        } catch (error) {
-            console.error("Widget initialization error:", error);
+        // Setup drag and drop for main grid
+        if (widgetGrid) {
+            const drake = dragula([widgetGrid], {
+                moves: (el, container, handle) => handle.classList.contains('drag-handle-icon')
+            });
+            drake.on('drop', saveWidgetOrder);
         }
     });
 }
