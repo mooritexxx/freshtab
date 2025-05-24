@@ -28,21 +28,115 @@ const modalBodyEl = document.getElementById('modalBodyEl');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 let currentModalCloseCallback = null;
 
-const WIDGET_CONTAINER_IDS = { 
-    weather: 'weather-widget-container', events: 'events-widget-container',
-    news: 'news-widget-container', todo: 'todo-widget-container',
-    notes: 'notes-widget-container', topSites: 'topsites-widget-container'
+// Widget Configuration
+const WIDGET_CONFIG = {
+    weather: { id: 'weather-widget-container', title: 'Weather & Air Quality', order: 1 },
+    events: { id: 'events-widget-container', title: 'Events', order: 2 },
+    news: { id: 'news-widget-container', title: 'News', order: 3 },
+    todo: { id: 'todo-widget-container', title: 'To-Do List', order: 4 },
+    notes: { id: 'notes-widget-container', title: 'Quick Notes', order: 5 },
+    topSites: { id: 'topsites-widget-container', title: 'Top Sites / Favorites', order: 6 }
 };
-const defaultWidgetSettings = {
-    weather: true, events: true, news: true,   
-    todo: true, notes: true, topSites: true 
-};
-const DEFAULT_WIDGET_ORDER = [ 
-    WIDGET_CONTAINER_IDS.weather, WIDGET_CONTAINER_IDS.todo, 
-    WIDGET_CONTAINER_IDS.notes, WIDGET_CONTAINER_IDS.events, 
-    WIDGET_CONTAINER_IDS.news, WIDGET_CONTAINER_IDS.topSites
-];
 
+// Default settings
+const defaultWidgetSettings = Object.fromEntries(
+    Object.keys(WIDGET_CONFIG).map(key => [key, true])
+);
+
+// Helper to get sorted widget keys based on current order
+function getSortedWidgetKeys(customOrder = null) {
+    if (customOrder?.length > 0) {
+        // Convert container IDs to widget keys and filter out any unknown widgets
+        const validKeys = customOrder
+            .map(id => Object.entries(WIDGET_CONFIG).find(([_, config]) => config.id === id)?.[0])
+            .filter(key => key);
+        
+        // Add any missing widgets at the end in their default order
+        Object.keys(WIDGET_CONFIG)
+            .filter(key => !validKeys.includes(key))
+            .forEach(key => validKeys.push(key));
+            
+        return validKeys;
+    }
+    
+    // Return default order if no custom order provided
+    return Object.entries(WIDGET_CONFIG)
+        .sort((a, b) => a[1].order - b[1].order)
+        .map(([key]) => key);
+}
+
+// Apply widget order to both grid and settings
+function applyWidgetOrder(order = null) {
+    if (!widgetGrid) return;
+
+    const sortedKeys = getSortedWidgetKeys(order);
+    const fragment = document.createDocumentFragment();
+    
+    // Apply order to main grid
+    sortedKeys.forEach(key => {
+        const widget = document.getElementById(WIDGET_CONFIG[key].id);
+        if (widget) {
+            fragment.appendChild(widget);
+        }
+    });
+    
+    widgetGrid.innerHTML = '';
+    widgetGrid.appendChild(fragment);
+
+    // Update settings modal if open
+    const widgetOrderContainer = document.querySelector('#widgetOrderOptionsContainer');
+    if (widgetOrderContainer) {
+        const modalFragment = document.createDocumentFragment();
+        
+        sortedKeys.forEach(key => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'widget-order-item';
+            itemDiv.dataset.widgetKey = key;
+            itemDiv.innerHTML = `
+                <label>
+                    <input type="checkbox" name="${key}" ${widgetSettings?.[key] !== false ? 'checked' : ''}>
+                    <span class="drag-handle">⠿</span>
+                    ${WIDGET_CONFIG[key].title}
+                </label>
+            `;
+            modalFragment.appendChild(itemDiv);
+        });
+
+        widgetOrderContainer.innerHTML = '';
+        widgetOrderContainer.appendChild(modalFragment);
+
+        // Reattach event listeners
+        widgetOrderContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => saveSettingsFromModal(modalBodyEl));
+        });
+
+        // Reinitialize Dragula if needed
+        if (window.settingsDrake) {
+            window.settingsDrake.destroy();
+        }
+        window.settingsDrake = dragula([widgetOrderContainer], {
+            moves: (el, container, handle) => handle.classList.contains('drag-handle')
+        });
+        window.settingsDrake.on('drop', () => saveSettingsFromModal(modalBodyEl));
+    }
+}
+
+// Save current widget order
+function saveWidgetOrder() {
+    if (!widgetGrid) return;
+    
+    const order = Array.from(widgetGrid.children)
+        .map(el => el.id)
+        .filter(id => Object.values(WIDGET_CONFIG).some(config => config.id === id));
+    
+    chrome.storage.sync.set({ widgetOrder: order }, () => {
+        if (chrome.runtime.lastError) {
+            console.error("Save order error:", chrome.runtime.lastError.message);
+        } else {
+            applyWidgetOrder(order);
+        }
+    });
+}
 
 // --- Modal Utility Functions ---
 function openModal(title, populateCallback, onCloseCallback) {
@@ -83,84 +177,7 @@ function displayLocationError(msg="Could not get location.") {
     if(locationErrorDiv) { locationErrorDiv.textContent = msg; locationErrorDiv.style.display = 'block';} 
     const locationDependentKeys = ['weather', 'events', 'news'];
     locationDependentKeys.forEach(key => {
-        if (WIDGET_CONTAINER_IDS[key]) hideWidget(WIDGET_CONTAINER_IDS[key]);
-    });
-}
-
-
-// --- Draggable Widget Order Logic ---
-function applyWidgetOrder(order) { 
-    if (!widgetGrid || !order?.length) return; 
-    
-    // Create a temporary document fragment
-    const fragment = document.createDocumentFragment();
-    
-    // First, append all widgets in the exact order specified
-    order.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            fragment.appendChild(el);
-        }
-    });
-    
-    // Then append any widgets that weren't in the order array
-    Array.from(widgetGrid.children).forEach(el => {
-        if (el.parentElement === widgetGrid) {
-            fragment.appendChild(el);
-        }
-    });
-    
-    // Clear the grid and append all widgets in the new order
-    widgetGrid.innerHTML = '';
-    widgetGrid.appendChild(fragment);
-
-    // Update the settings modal if it's open
-    updateSettingsModalOrder(order);
-}
-
-function updateSettingsModalOrder(order) {
-    const widgetOrderContainer = document.querySelector('#widgetOrderOptionsContainer');
-    if (!widgetOrderContainer) return; // Settings modal not open
-
-    const fragment = document.createDocumentFragment();
-    const existingItems = {};
-
-    // First, add items in the specified order
-    order.forEach(id => {
-        const widgetKey = id.replace('-widget-container', '');
-        const existingItem = widgetOrderContainer.querySelector(`[data-widget-key="${widgetKey}"]`);
-        if (existingItem) {
-            fragment.appendChild(existingItem);
-            existingItems[widgetKey] = true;
-        }
-    });
-
-    // Then add any remaining items
-    Array.from(widgetOrderContainer.children).forEach(item => {
-        const widgetKey = item.dataset.widgetKey;
-        if (!existingItems[widgetKey]) {
-            fragment.appendChild(item);
-        }
-    });
-
-    // Clear and append in new order
-    widgetOrderContainer.innerHTML = '';
-    widgetOrderContainer.appendChild(fragment);
-}
-
-function saveWidgetOrder() { 
-    if (!widgetGrid) return; 
-    const order = Array.from(widgetGrid.children)
-        .map(c => c.id)
-        .filter(id => Object.values(WIDGET_CONTAINER_IDS).includes(id)); 
-    
-    chrome.storage.sync.set({ widgetOrder: order }, () => { 
-        if (chrome.runtime.lastError) {
-            console.error("Save order error:", chrome.runtime.lastError.message);
-        } else {
-            // Successfully saved, now update both views
-            applyWidgetOrder(order);
-        }
+        if (WIDGET_CONFIG[key].id) hideWidget(WIDGET_CONFIG[key].id);
     });
 }
 
@@ -214,53 +231,37 @@ function populateSettingsModal(modalBody) {
             <div id="settings-status" class="settings-status"></div>
         `;
 
-        // Populate widget order/visibility in the "Widgets" tab
+        // Get the widget order container
         const widgetOrderContainer = modalBody.querySelector('#widgetOrderOptionsContainer');
         const loadedSettings = { ...defaultWidgetSettings, ...(widgetSettings || {}) };
         
-        let orderKeysToUse = [];
-        if (widgetOrder && Array.isArray(widgetOrder) && widgetOrder.length > 0) {
-            orderKeysToUse = widgetOrder.map(id => id.replace('-widget-container', ''))
-                .filter(key => ORDERABLE_WIDGETS.hasOwnProperty(key));
-            
-            Object.keys(ORDERABLE_WIDGETS).forEach(key => {
-                if (!orderKeysToUse.includes(key)) {
-                    orderKeysToUse.push(key);
-                }
-            });
-        } else {
-            orderKeysToUse = DEFAULT_WIDGET_ORDER.map(id => id.replace('-widget-container', ''))
-                .filter(key => ORDERABLE_WIDGETS.hasOwnProperty(key));
-        }
-
-        orderKeysToUse.forEach(widgetKey => {
-            if (ORDERABLE_WIDGETS.hasOwnProperty(widgetKey)) {
-                const widgetDisplayName = ORDERABLE_WIDGETS[widgetKey];
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'widget-order-item';
-                itemDiv.dataset.widgetKey = widgetKey; 
-                const isChecked = loadedSettings[widgetKey];
-                itemDiv.innerHTML = `
-                    <label>
-                        <input type="checkbox" name="${widgetKey}" ${isChecked ? 'checked' : ''}>
-                        <span class="widget-order-drag-handle">⠿</span>
-                        ${widgetDisplayName}
-                    </label>
-                `;
-                widgetOrderContainer.appendChild(itemDiv);
-            }
+        // Get sorted widget keys
+        const sortedKeys = getSortedWidgetKeys(widgetOrder);
+        
+        // Populate widgets in the correct order
+        sortedKeys.forEach(key => {
+            const config = WIDGET_CONFIG[key];
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'widget-order-item';
+            itemDiv.dataset.widgetKey = key;
+            itemDiv.innerHTML = `
+                <label>
+                    <input type="checkbox" name="${key}" ${loadedSettings[key] ? 'checked' : ''}>
+                    <span class="drag-handle">⠿</span>
+                    ${config.title}
+                </label>
+            `;
+            widgetOrderContainer.appendChild(itemDiv);
         });
 
         // Initialize Dragula for the settings modal
-        const settingsDrake = dragula([widgetOrderContainer], {
-            moves: function(el, container, handle) {
-                return handle.classList.contains('widget-order-drag-handle');
-            }
+        if (window.settingsDrake) {
+            window.settingsDrake.destroy();
+        }
+        window.settingsDrake = dragula([widgetOrderContainer], {
+            moves: (el, container, handle) => handle.classList.contains('drag-handle')
         });
-
-        settingsDrake.on('drop', function() {
-            saveSettingsFromModal(modalBody);
-        });
+        window.settingsDrake.on('drop', () => saveSettingsFromModal(modalBody));
 
         // Add event listeners for modal buttons and tabs
         attachSettingsModalListeners(modalBody);
@@ -299,22 +300,22 @@ function saveSettingsFromModal(modalBody) {
     const manualLocationValue = modalBody.querySelector('#manualLocation').value.trim();
 
     const newWidgetSettings = {};
-    const newWidgetOrderContainerIds = [];
-    const orderedWidgetItems = modalBody.querySelectorAll('.widget-order-item');
-
-    orderedWidgetItems.forEach(item => {
-        const key = item.dataset.widgetKey;
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        if (key && checkbox) {
-            newWidgetSettings[key] = checkbox.checked;
-            newWidgetOrderContainerIds.push(`${key}-widget-container`);
-        }
-    });
+    const newWidgetOrder = Array.from(modalBody.querySelectorAll('.widget-order-item'))
+        .map(item => {
+            const key = item.dataset.widgetKey;
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (key && checkbox) {
+                newWidgetSettings[key] = checkbox.checked;
+                return WIDGET_CONFIG[key].id;
+            }
+            return null;
+        })
+        .filter(id => id);
 
     const dataToSave = {
         userName: userNameValue,
         widgetSettings: newWidgetSettings,
-        widgetOrder: newWidgetOrderContainerIds,
+        widgetOrder: newWidgetOrder,
         manualLocation: manualLocationValue ? { name: manualLocationValue } : null
     };
 
@@ -337,19 +338,19 @@ function saveSettingsFromModal(modalBody) {
                     statusDiv.style.opacity = '0';
                 }, 1500);
             }
+            
             // Apply changes immediately
             if (mainHeader && dataToSave.userName) {
                 mainHeader.textContent = `Welcome, ${dataToSave.userName}!`;
             }
-            applyWidgetOrder(newWidgetOrderContainerIds);
-            Object.keys(newWidgetSettings).forEach(key => {
-                const containerId = `${key}-widget-container`;
-                if (newWidgetSettings[key]) {
-                    showWidget(containerId);
-                } else {
-                    hideWidget(containerId);
-                }
+            
+            // Update widget visibility and order
+            Object.entries(newWidgetSettings).forEach(([key, isVisible]) => {
+                const containerId = WIDGET_CONFIG[key].id;
+                isVisible ? showWidget(containerId) : hideWidget(containerId);
             });
+            
+            applyWidgetOrder(newWidgetOrder);
         }
     });
 }
@@ -413,115 +414,75 @@ function attachSettingsModalListeners(modalBody) {
 
 // --- Main Initialization Logic ---
 async function initializeDashboard() {
-    if (typeof TimeWidget?.init === 'function') TimeWidget.init(); 
+    if (typeof TimeWidget?.init === 'function') TimeWidget.init();
     else console.error("TimeWidget missing or not initializable.");
 
     chrome.storage.sync.get(['userName', 'manualLocation', 'widgetSettings', 'widgetOrder', 'darkModeEnabled'], async (data) => {
-        const { userName, manualLocation, widgetSettings, widgetOrder: savedWidgetOrder, darkModeEnabled } = data;
+        const { userName, manualLocation, widgetSettings: savedWidgetSettings, widgetOrder, darkModeEnabled } = data;
         applyTheme(darkModeEnabled);
-        const currentWidgetSettings = { ...defaultWidgetSettings, ...(widgetSettings || {}) };
+        
+        // Initialize widget settings
+        window.widgetSettings = { ...defaultWidgetSettings, ...(savedWidgetSettings || {}) };
+        
+        if (mainHeader) {
+            mainHeader.textContent = userName?.trim() ? `Welcome, ${userName.trim()}!` : 'Welcome!';
+        }
+
+        // Handle location setup
         let effectiveLocation = null;
-
-        if (mainHeader) mainHeader.textContent = (userName?.trim()) ? `Welcome, ${userName.trim()}!` : 'Welcome!';
-
-        if (manualLocation?.name) {
-            effectiveLocation = await geocodeCityName(manualLocation.name, OPENWEATHERMAP_API_KEY);
-            if (!effectiveLocation) displayLocationError(`Could not find coordinates for "${manualLocation.name}".`);
-        } else {
-            try {
-                effectiveLocation = await getUserLocation();
-                if (effectiveLocation.latitude && !effectiveLocation.name) { 
-                   try {const gUrl=`https://api.openweathermap.org/geo/1.0/reverse?lat=${effectiveLocation.latitude}&lon=${effectiveLocation.longitude}&limit=1&appid=${OPENWEATHERMAP_API_KEY}`;const r=await fetch(gUrl);if(r.ok){const gD=await r.json();if(gD?.[0]){const cN=gD[0].name||"";const cC=gD[0].country||"";if(cN)effectiveLocation.name=cC?`${cN}, ${cC}`:cN;}}}catch(e){/* Silently fail on non-critical reverse geocode */}
-                }
-                if(locationErrorDiv) locationErrorDiv.style.display = 'none'; // Hide if previously shown
-            } catch (error) { displayLocationError(error.message); }
+        try {
+            effectiveLocation = manualLocation?.name 
+                ? await geocodeCityName(manualLocation.name, OPENWEATHERMAP_API_KEY)
+                : await getUserLocation();
+                
+            if (!effectiveLocation) throw new Error('Could not determine location');
+            if (locationErrorDiv) locationErrorDiv.style.display = 'none';
+        } catch (error) {
+            console.error('Location setup error:', error);
+            displayLocationError(error.message);
         }
-        
-        const activeWidgetKeys = {};
-        Object.keys(WIDGET_CONTAINER_IDS).forEach(key => {
-            activeWidgetKeys[key] = !!currentWidgetSettings[key];
+
+        // Show/hide widgets based on settings
+        Object.entries(WIDGET_CONFIG).forEach(([key, config]) => {
+            widgetSettings[key] ? showWidget(config.id) : hideWidget(config.id);
         });
 
-        // First, hide/show widgets based on settings
-        Object.keys(WIDGET_CONTAINER_IDS).forEach(key => {
-            activeWidgetKeys[key] ? showWidget(WIDGET_CONTAINER_IDS[key]) : hideWidget(WIDGET_CONTAINER_IDS[key]);
-        });
+        // Apply widget order
+        applyWidgetOrder(widgetOrder);
 
-        // Determine the widget order
-        let orderToApply = [];
-        if (savedWidgetOrder?.length > 0) {
-            // Filter out inactive widgets from saved order
-            orderToApply = savedWidgetOrder.filter(id => 
-                Object.values(WIDGET_CONTAINER_IDS).includes(id) && 
-                activeWidgetKeys[id.replace('-widget-container', '')]
-            );
-            
-            // Add any active widgets that aren't in the saved order
-            DEFAULT_WIDGET_ORDER.forEach(id => {
-                const key = id.replace('-widget-container', '');
-                if (activeWidgetKeys[key] && !orderToApply.includes(id)) {
-                    orderToApply.push(id);
-                }
-            });
-        } else {
-            // Use default order, filtering out inactive widgets
-            orderToApply = DEFAULT_WIDGET_ORDER.filter(id => 
-                activeWidgetKeys[id.replace('-widget-container', '')]
-            );
-        }
-
-        // Apply the order before initializing widgets
-        if (widgetGrid && orderToApply.length > 0) {
-            applyWidgetOrder(orderToApply);
-        }
-        
         // Initialize widgets
         const initPromises = [];
-        const locationNeededWidgetKeys = ['weather', 'events', 'news'];
-        let someLocationWidgetActiveAndNeedsLocation = locationNeededWidgetKeys.some(key => activeWidgetKeys[key]);
-
+        
+        // Location-dependent widgets
         if (effectiveLocation) {
-            if (activeWidgetKeys.weather && typeof WeatherWidget?.init === 'function') 
-                initPromises.push(WeatherWidget.init(effectiveLocation, OPENWEATHERMAP_API_KEY, currentWidgetSettings));
-            if (activeWidgetKeys.events && typeof EventsWidget?.init === 'function') 
+            if (widgetSettings.weather && typeof WeatherWidget?.init === 'function') 
+                initPromises.push(WeatherWidget.init(effectiveLocation, OPENWEATHERMAP_API_KEY, widgetSettings));
+            if (widgetSettings.events && typeof EventsWidget?.init === 'function') 
                 initPromises.push(EventsWidget.init(effectiveLocation, TICKETMASTER_API_KEY));
-            if (activeWidgetKeys.news && typeof NewsWidget?.init === 'function') 
+            if (widgetSettings.news && typeof NewsWidget?.init === 'function') 
                 initPromises.push(NewsWidget.init(effectiveLocation, GNEWS_API_KEY));
-        } else if (someLocationWidgetActiveAndNeedsLocation) {
-            if(locationErrorDiv && (locationErrorDiv.style.display === 'none' || !locationErrorDiv.textContent.trim())) {
-                displayLocationError("Location data needed for some active widgets. Please set in options or allow browser location.");
-            }
         }
 
-        if (activeWidgetKeys.todo && typeof TodoWidget?.init === 'function') 
+        // Location-independent widgets
+        if (widgetSettings.todo && typeof TodoWidget?.init === 'function') 
             initPromises.push(TodoWidget.init());
-        if (activeWidgetKeys.notes && typeof NotesWidget?.init === 'function') 
+        if (widgetSettings.notes && typeof NotesWidget?.init === 'function') 
             initPromises.push(NotesWidget.init());
-        if (activeWidgetKeys.topSites && typeof TopSitesWidget?.init === 'function') 
+        if (widgetSettings.topSites && typeof TopSitesWidget?.init === 'function') 
             initPromises.push(TopSitesWidget.init());
-        
-        try { 
+
+        try {
             await Promise.allSettled(initPromises);
             
-            // Re-apply the order after all widgets are initialized
-            if (widgetGrid && orderToApply.length > 0) {
-                applyWidgetOrder(orderToApply);
-            }
-            
-            // Initialize Dragula for the main widget grid
+            // Setup drag and drop for main grid
             if (widgetGrid) {
-                const gridDrake = dragula([widgetGrid], {
-                    moves: function(el, container, handle) {
-                        return handle.classList.contains('drag-handle-icon');
-                    }
+                const drake = dragula([widgetGrid], {
+                    moves: (el, container, handle) => handle.classList.contains('drag-handle-icon')
                 });
-
-                gridDrake.on('drop', function() {
-                    saveWidgetOrder();
-                });
+                drake.on('drop', saveWidgetOrder);
             }
-        } catch(e) { 
-            console.error("Error during widget initializations", e); 
+        } catch (error) {
+            console.error("Widget initialization error:", error);
         }
     });
 }
