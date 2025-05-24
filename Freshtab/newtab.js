@@ -299,18 +299,27 @@ function saveSettingsFromModal(modalBody) {
     const userNameValue = modalBody.querySelector('#userNameInput').value.trim();
     const manualLocationValue = modalBody.querySelector('#manualLocation').value.trim();
 
+    // Get current widget settings
+    const currentSettings = window.widgetSettings || {};
+
+    // Update widget settings based on checkboxes
     const newWidgetSettings = {};
     const newWidgetOrder = Array.from(modalBody.querySelectorAll('.widget-order-item'))
         .map(item => {
             const key = item.dataset.widgetKey;
             const checkbox = item.querySelector('input[type="checkbox"]');
             if (key && checkbox) {
+                // Update the widget settings
                 newWidgetSettings[key] = checkbox.checked;
-                return WIDGET_CONFIG[key].id;
+                // Only include in order if widget is enabled
+                return checkbox.checked ? WIDGET_CONFIG[key].id : null;
             }
             return null;
         })
         .filter(id => id);
+
+    // Update the global widget settings
+    window.widgetSettings = { ...currentSettings, ...newWidgetSettings };
 
     const dataToSave = {
         userName: userNameValue,
@@ -347,9 +356,15 @@ function saveSettingsFromModal(modalBody) {
             // Update widget visibility and order
             Object.entries(newWidgetSettings).forEach(([key, isVisible]) => {
                 const containerId = WIDGET_CONFIG[key].id;
-                isVisible ? showWidget(containerId) : hideWidget(containerId);
+                if (containerId) {
+                    const widget = document.getElementById(containerId);
+                    if (widget) {
+                        widget.style.display = isVisible ? 'block' : 'none';
+                    }
+                }
             });
             
+            // Apply the new widget order
             applyWidgetOrder(newWidgetOrder);
         }
     });
