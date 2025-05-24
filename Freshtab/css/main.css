@@ -38,6 +38,8 @@ body {
     --scrollbar-track-bg: var(--page-bg);
     --checkbox-bg: var(--accent-color);
     --checkbox-border: var(--input-border-color);
+    --skeleton-base: #e9ecef;
+    --skeleton-highlight: #f8f9fa;
 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
@@ -81,6 +83,8 @@ body.dark-mode {
     --link-hover-color: var(--accent-color-hover);
     --scrollbar-thumb-bg: #555;
     --scrollbar-track-bg: var(--page-bg);
+    --skeleton-base: #383838;
+    --skeleton-highlight: #444444;
 }
 
 /* --- Scrollbar Styling --- */
@@ -523,4 +527,107 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
 /* Remove old footer styles since we don't need them anymore */
 .modal-footer {
     display: none;
+}
+
+/* --- Loading States and Placeholders --- */
+.widget-loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton {
+    background: var(--skeleton-base);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--skeleton-highlight),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Skeleton templates for different content types */
+.skeleton-text {
+    height: 1em;
+    margin: 0.5em 0;
+}
+
+.skeleton-text.large {
+    height: 1.5em;
+    margin: 0.7em 0;
+}
+
+.skeleton-text.small {
+    height: 0.8em;
+    margin: 0.4em 0;
+}
+
+.skeleton-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.skeleton-box {
+    width: 100%;
+    height: 80px;
+    margin: 10px 0;
+}
+
+/* Widget-specific loading states */
+.widget-container.loading .widget-content {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.widget-container.loading::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--widget-bg);
+    opacity: 0.8;
+    z-index: 1;
+}
+
+.widget-container.loading::after {
+    content: "";
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 3px solid var(--widget-border-light);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 2;
+}
+
+@keyframes spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }

@@ -3,80 +3,201 @@
 #weather-widget {
     display: flex;
     flex-direction: column;
-    justify-content: space-between; 
-    gap: 10px;
+    justify-content: flex-start; 
+    gap: 5px;
 }
 
-#weather-widget img.weather-icon-large {width: 80px; height: 80px; margin: -10px 0 0 0;}
-.weather-main {display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 10px; flex-shrink: 0;}
-.weather-temp-current {font-size: 2.8em; font-weight: 600; color: var(--text-color-primary); line-height: 1.1; margin-top: -5px;}
-.weather-condition {font-size: 1.1em; color: var(--text-color-secondary); text-transform: capitalize; margin-top: 5px;}
-.weather-location {font-size: 1.3em; font-weight: bold; color: var(--text-color-primary); margin-top: 8px;}
-.weather-details-grid {display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 12px; width: 100%; font-size: 0.85em; color: var(--text-color-secondary); text-align: left; margin-bottom: 10px; flex-shrink: 0;}
-.weather-detail-item {padding: 2px 0;}
-.weather-detail-item strong {color: var(--text-color-primary);}
-.weather-last-updated {font-size: 0.75em; color: var(--text-color-subtle); margin-top: auto; padding-top:10px; text-align: center; width: 100%; flex-shrink: 0;}
-
-/* Styles for Weather Forecast Sections */
-.weather-forecast-hourly, 
-.weather-forecast-daily {
-    width: 100%;
-    margin-top: 10px; 
-    padding-top: 10px;
-    border-top: 1px solid var(--widget-border-light);
-    flex-shrink: 0; 
-}
-.weather-forecast-hourly h4, 
-.weather-forecast-daily h4 {
-    font-size: 0.9em;
-    font-weight: bold;
-    color: var(--text-color-primary);
-    margin: 0 0 8px 0;
-    text-align: left;
-}
-
-/* Hourly Forecast - Already a row */
-.hourly-items-container {
-    display: flex;
-    flex-direction: row; 
-    overflow-x: auto;   
-    gap: 10px;
-    padding-bottom: 10px; 
-    padding-left: 2px; 
-}
-.hourly-item {
-    display: flex; flex-direction: column; align-items: center; text-align: center;
-    padding: 8px; background-color: var(--page-bg); border-radius: 6px;
-    min-width: 70px; font-size: 0.8em; border: 1px solid var(--widget-border-light);
-}
-.hourly-time {font-weight: bold; color: var(--text-color-primary);}
-.hourly-icon {width: 40px; height: 40px;}
-.hourly-temp {font-size: 1.1em; font-weight: 500; color: var(--text-color-primary);}
-.hourly-pop, .daily-pop {font-size: 0.9em; color: var(--accent-color);}
-.precip-icon {font-size: 0.9em;}
-
-/* Daily Forecast - Changed to flex row with horizontal scroll */
-.daily-items-container {
-    display: flex;
-    flex-direction: row; /* Makes items go in a row */
-    overflow-x: auto;    /* Allows horizontal scrolling if items exceed width */
-    gap: 10px;           /* Gap between daily items */
-    padding-bottom: 10px;/* Space for scrollbar if it appears */
-    padding-left: 2px;
-}
-.daily-item {
+.weather-main {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     padding: 8px;
-    background-color: var(--page-bg);
-    border-radius: 6px;
-    font-size: 0.85em;
-    border: 1px solid var(--widget-border-light);
-    min-width: 80px; /* Give daily items a minimum width for row layout */
-    flex-shrink: 0; /* Prevent items from shrinking too much in the flex row */
+    flex-shrink: 0;
+    will-change: transform;
+    contain: content;
 }
-.daily-dayName {font-weight: bold; color: var(--text-color-primary);}
-.daily-icon {width: 45px; height: 45px;}
-.daily-temp {font-size: 1em; color: var(--text-color-primary); margin: 2px 0;}
+
+.weather-icon-large {
+    width: 64px;
+    height: 64px;
+    margin: 0;
+    will-change: transform;
+    contain: size layout;
+}
+
+.weather-temp-current {
+    font-size: 2em;
+    font-weight: bold;
+    margin: 0;
+    will-change: transform;
+    color: var(--text-color-primary);
+    line-height: 1;
+}
+
+.weather-condition {
+    font-size: 0.95em;
+    margin: 0;
+    color: var(--text-color-secondary);
+    text-transform: capitalize;
+    line-height: 1.2;
+}
+
+.weather-location {
+    font-size: 0.95em;
+    color: var(--text-color-primary);
+    font-weight: bold;
+    margin: 0;
+    line-height: 1.2;
+}
+
+/* Compact Forecast Styles */
+.weather-forecast-hourly, 
+.weather-forecast-daily {
+    width: 100%;
+    padding: 6px 8px;
+    contain: layout style;
+    border-top: 1px solid var(--widget-border-light);
+    flex-shrink: 0;
+}
+
+.weather-forecast-hourly h4, 
+.weather-forecast-daily h4 {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--text-color-primary);
+    margin: 0 0 4px 0;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hourly-items-container,
+.daily-items-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    contain: layout style paint;
+}
+
+.hourly-item,
+.daily-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2px;
+    background-color: var(--page-bg);
+    border-radius: 3px;
+    font-size: 0.7em;
+    border: 1px solid var(--widget-border-light);
+    will-change: transform;
+    contain: content;
+    line-height: 1.1;
+}
+
+.hourly-time,
+.daily-dayName {
+    font-size: 0.85em;
+    color: var(--text-color-primary);
+    font-weight: 500;
+}
+
+.hourly-icon,
+.daily-icon {
+    width: 28px;
+    height: 28px;
+    margin: 1px auto;
+    will-change: transform;
+    contain: size layout;
+}
+
+.hourly-temp,
+.daily-temp {
+    font-size: 0.85em;
+    color: var(--text-color-primary);
+    margin: 0;
+}
+
+.hourly-pop,
+.daily-pop {
+    font-size: 0.75em;
+    color: var(--text-color-subtle);
+    margin-top: -1px;
+}
+
+.precip-icon {
+    font-size: 0.75em;
+}
+
+/* Compact Details Grid */
+.weather-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 8px;
+    contain: layout style;
+    width: 100%;
+    font-size: 0.75em;
+    color: var(--text-color-secondary);
+    text-align: left;
+    flex-shrink: 0;
+    margin-top: 2px;
+    line-height: 1.2;
+}
+
+.weather-detail-item {
+    font-size: 0.85em;
+    color: var(--text-color-secondary);
+    padding: 1px 0;
+}
+
+.weather-detail-item strong {
+    color: var(--text-color-primary);
+    display: block;
+    margin-bottom: 0;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.weather-last-updated {
+    font-size: 0.7em;
+    color: var(--text-color-subtle);
+    text-align: right;
+    padding: 4px 8px;
+    margin-top: 2px;
+    border-top: 1px solid var(--widget-border-light);
+}
+
+/* Loading state optimizations */
+.weather-main .skeleton,
+.weather-details-grid .skeleton,
+.weather-forecast-hourly .skeleton,
+.weather-forecast-daily .skeleton {
+    background: var(--skeleton-base);
+    border-radius: 4px;
+    animation: shimmer 1.5s infinite;
+    will-change: transform;
+    contain: paint layout style;
+}
+
+/* Performance optimizations for animations */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Layer promotion for better performance */
+.weather-main,
+.weather-details-grid,
+.hourly-items-container,
+.daily-items-container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}

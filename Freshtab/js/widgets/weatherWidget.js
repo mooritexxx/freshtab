@@ -5,7 +5,8 @@ const WeatherWidget = {
     weatherWidgetDiv: null,
     placeholderApiKey: 'YOUR_OWN_HARDCODED_API_KEY_HERE', 
     settings: null, 
-    cacheDuration: 3 * 60 * 60 * 1000, 
+    cacheDuration: 3 * 60 * 60 * 1000,
+    containerDiv: null,
 
     // _formatUnixTimestampToTime: function(...) { /* REMOVED - Now in Utils.js */ },
     // _convertWindDirection: function(...) { /* REMOVED - Now in Utils.js */ },
@@ -13,10 +14,75 @@ const WeatherWidget = {
         if(typeof uvi!=='number')return '';if(uvi<=2)return"(Low)";if(uvi<=5)return"(Moderate)";if(uvi<=7)return"(High)";if(uvi<=10)return"(Very High)";return"(Extreme)";
     },
 
-    init: async function(location, openWeatherMapApiKey, currentSettings) { /* ... (no change from V2.7) ... */ 
-        this.apiKey=openWeatherMapApiKey;this.settings=currentSettings;this.weatherWidgetDiv=document.getElementById('weather-widget');
-        if(!this.weatherWidgetDiv){console.error("WeatherWidget: #weather-widget DOM element not found.");return;}
-        if(this.settings.weather)await this._fetchAndDisplayFullWeather(location);else this.weatherWidgetDiv.innerHTML="";
+    _showLoadingState: function() {
+        if (!this.weatherWidgetDiv) return;
+        
+        // Add loading class to container
+        if (this.containerDiv) {
+            this.containerDiv.classList.add('loading');
+        }
+
+        this.weatherWidgetDiv.innerHTML = `
+            <div class="weather-main">
+                <div class="skeleton skeleton-circle"></div>
+                <div class="skeleton skeleton-text large" style="width: 80px; margin: 15px auto;"></div>
+                <div class="skeleton skeleton-text" style="width: 150px; margin: 10px auto;"></div>
+                <div class="skeleton skeleton-text" style="width: 120px; margin: 10px auto;"></div>
+            </div>
+            <div class="weather-details-grid">
+                ${Array(8).fill('<div class="skeleton skeleton-text" style="width: 90%;"></div>').join('')}
+            </div>
+            <div class="weather-forecast-hourly">
+                <div class="skeleton skeleton-text" style="width: 60px; margin: 15px 0;"></div>
+                <div style="display: flex; justify-content: space-between;">
+                    ${Array(4).fill(`
+                        <div style="flex: 1; margin: 0 5px;">
+                            <div class="skeleton skeleton-text small" style="width: 40px;"></div>
+                            <div class="skeleton skeleton-circle" style="width: 30px; height: 30px; margin: 10px auto;"></div>
+                            <div class="skeleton skeleton-text small" style="width: 30px; margin: 5px auto;"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="weather-forecast-daily">
+                <div class="skeleton skeleton-text" style="width: 60px; margin: 15px 0;"></div>
+                <div style="display: flex; justify-content: space-between;">
+                    ${Array(4).fill(`
+                        <div style="flex: 1; margin: 0 5px;">
+                            <div class="skeleton skeleton-text small" style="width: 30px;"></div>
+                            <div class="skeleton skeleton-circle" style="width: 30px; height: 30px; margin: 10px auto;"></div>
+                            <div class="skeleton skeleton-text small" style="width: 50px; margin: 5px auto;"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    },
+
+    _hideLoadingState: function() {
+        if (this.containerDiv) {
+            this.containerDiv.classList.remove('loading');
+        }
+    },
+
+    init: async function(location, openWeatherMapApiKey, currentSettings) {
+        this.apiKey = openWeatherMapApiKey;
+        this.settings = currentSettings;
+        this.weatherWidgetDiv = document.getElementById('weather-widget');
+        this.containerDiv = document.getElementById('weather-widget-container');
+        
+        if (!this.weatherWidgetDiv) {
+            console.error("WeatherWidget: #weather-widget DOM element not found.");
+            return;
+        }
+
+        if (this.settings.weather) {
+            this._showLoadingState();
+            await this._fetchAndDisplayFullWeather(location);
+            this._hideLoadingState();
+        } else {
+            this.weatherWidgetDiv.innerHTML = "";
+        }
     },
 
     // _getApiErrorMessage: async function(...) { /* REMOVED - Now in Utils.js */ },
@@ -70,46 +136,142 @@ const WeatherWidget = {
         } catch (error) { console.error("WeatherWidget (Forecast Fetch) Error:", error.message); return { hourly: [], daily: [] };}
     },
 
-    _fetchAndDisplayFullWeather: async function(location) { /* ... (uses Utils helpers) ... */
+    _formatTime: function(timeStr) {
+        // Input format example: "2:00 PM" or "11:00 AM"
+        const [time, period] = timeStr.split(' ');
+        const [hours] = time.split(':');
+        return `${parseInt(hours)}${period.toLowerCase()}`;
+    },
+
+    _fetchAndDisplayFullWeather: async function(location) {
         if (!this.weatherWidgetDiv) return;
-        if (!this.apiKey || this.apiKey === this.placeholderApiKey) { this.weatherWidgetDiv.innerHTML = "<p>Weather service unavailable (Dev: API key).</p>"; return; }
-        this.weatherWidgetDiv.innerHTML = '<p>Loading weather data...</p>';
-        let currentWeatherData; let weatherUrl;
-        if (location.latitude && location.longitude) weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${location.latitude}&lon=${location.longitude}&appid=${this.apiKey}&units=metric`;
-        else if (location.name) weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location.name)}&appid=${this.apiKey}&units=metric`;
-        else { this.weatherWidgetDiv.innerHTML = "<p>Location not available.</p>"; return; }
+        
+        if (!this.apiKey || this.apiKey === this.placeholderApiKey) {
+            this.weatherWidgetDiv.innerHTML = "<p>Weather service unavailable (Dev: API key).</p>";
+            return;
+        }
+
+        let currentWeatherData;
+        let weatherUrl;
+
+        if (location.latitude && location.longitude) {
+            weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${location.latitude}&lon=${location.longitude}&appid=${this.apiKey}&units=metric`;
+        } else if (location.name) {
+            weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location.name)}&appid=${this.apiKey}&units=metric`;
+        } else {
+            this.weatherWidgetDiv.innerHTML = "<p>Location not available.</p>";
+            return;
+        }
+
         try {
             const weatherResponse = await fetch(weatherUrl);
-            if (!weatherResponse.ok) { const errorMsg = await Utils.getApiErrorMessage(weatherResponse, "Current Weather"); throw new Error(errorMsg); } // USE UTILS
+            if (!weatherResponse.ok) {
+                const errorMsg = await Utils.getApiErrorMessage(weatherResponse, "Current Weather");
+                throw new Error(errorMsg);
+            }
             currentWeatherData = await weatherResponse.json();
-        } catch (error) { console.error("WeatherWidget (Current Weather) Error:", error.message); this.weatherWidgetDiv.innerHTML = `<p>Could not load current weather.</p>`; return;}
-        
+        } catch (error) {
+            console.error("WeatherWidget (Current Weather) Error:", error.message);
+            this.weatherWidgetDiv.innerHTML = `<p>Could not load current weather.</p>`;
+            return;
+        }
+
         const latForForecast = currentWeatherData.coord?.lat || location.latitude;
         const lonForForecast = currentWeatherData.coord?.lon || location.longitude;
         const locationTimezoneOffset = currentWeatherData.timezone || 0;
         let forecastData = { hourly: [], daily: [] };
-        if (latForForecast && lonForForecast) forecastData = await this._getProcessedForecastData(latForForecast, lonForForecast, locationTimezoneOffset);
         
+        if (latForForecast && lonForForecast) {
+            forecastData = await this._getProcessedForecastData(latForForecast, lonForForecast, locationTimezoneOffset);
+        }
+
         let aqiHtml = '';
         if (latForForecast && lonForForecast) {
             const aqiUrl = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latForForecast}&lon=${lonForForecast}&appid=${this.apiKey}`;
             try {
                 const aqiResponse = await fetch(aqiUrl);
-                if (!aqiResponse.ok) { const errorMsg = await Utils.getApiErrorMessage(aqiResponse, "AQI"); throw new Error(errorMsg); } // USE UTILS
+                if (!aqiResponse.ok) {
+                    const errorMsg = await Utils.getApiErrorMessage(aqiResponse, "AQI");
+                    throw new Error(errorMsg);
+                }
                 const aqiResult = await aqiResponse.json();
-                if (aqiResult.list?.length > 0) { const aqiValue = aqiResult.list[0].main.aqi; const aqiMeaning = ['Good', 'Fair', 'Moderate', 'Poor', 'Very Poor'][aqiValue - 1] || 'Unknown'; aqiHtml = `<div class="weather-detail-item"><strong>Air Quality:</strong> ${aqiValue} (${aqiMeaning})</div>`;}
-                else aqiHtml = `<div class="weather-detail-item"><strong>Air Quality:</strong> Data not available.</div>`;
-            } catch (aqiError) { console.error("WeatherWidget (AQI) Error:", aqiError.message); aqiHtml = `<div class="weather-detail-item"><strong>Air Quality:</strong> Could not load.</div>`;}
+                if (aqiResult.list?.length > 0) {
+                    const aqiValue = aqiResult.list[0].main.aqi;
+                    const aqiMeaning = ['Good', 'Fair', 'Moderate', 'Poor', 'Very Poor'][aqiValue - 1] || 'Unknown';
+                    aqiHtml = `<div class="weather-detail-item"><strong>AQI</strong>${aqiValue} (${aqiMeaning})</div>`;
+                }
+            } catch (aqiError) {
+                console.error("WeatherWidget (AQI) Error:", aqiError.message);
+            }
         }
-        
-        const c = currentWeatherData; const lastUpdatedTime = Utils.formatUnixTimestampToTime(c.dt, locationTimezoneOffset); // USE UTILS
-        const sunriseTime = Utils.formatUnixTimestampToTime(c.sys.sunrise, locationTimezoneOffset); // USE UTILS
-        const sunsetTime = Utils.formatUnixTimestampToTime(c.sys.sunset, locationTimezoneOffset); // USE UTILS
-        const mainHtml = `<div class="weather-main"><img src="https://openweathermap.org/img/wn/${c.weather[0].icon}@2x.png" alt="${c.weather[0].description}" class="weather-icon-large"><div class="weather-temp-current">${Math.round(c.main.temp)}°C</div><div class="weather-condition">${c.weather[0].main} (${c.weather[0].description})</div><div class="weather-location">${c.name}</div></div>`;
-        const detailsHtml = `<div class="weather-details-grid"><div class="weather-detail-item"><strong>Feels Like:</strong> ${Math.round(c.main.feels_like)}°C</div><div class="weather-detail-item"><strong>High:</strong> ${Math.round(c.main.temp_max)}°C / <strong>Low:</strong> ${Math.round(c.main.temp_min)}°C</div><div class="weather-detail-item"><strong>Humidity:</strong> ${c.main.humidity}%</div><div class="weather-detail-item"><strong>Wind:</strong> ${Utils.convertWindDirection(c.wind.deg)} ${Math.round(c.wind.speed*3.6)} km/h</div><div class="weather-detail-item"><strong>Sunrise:</strong> ${sunriseTime}</div><div class="weather-detail-item"><strong>Sunset:</strong> ${sunsetTime}</div><div class="weather-detail-item"><strong>Pressure:</strong> ${c.main.pressure} hPa</div>${c.visibility?`<div class="weather-detail-item"><strong>Visibility:</strong> ${(c.visibility/1000).toFixed(1)} km</div>`:''}${aqiHtml}</div>`;
-        let hourlyHtml = ''; if(forecastData.hourly.length>0){hourlyHtml='<div class="weather-forecast-hourly"><h4>Hourly</h4><div class="hourly-items-container">';forecastData.hourly.forEach(h=>{hourlyHtml+=`<div class="hourly-item"><div class="hourly-time">${h.time.replace(/\s?[AP]M$/,'')}</div><img src="https://openweathermap.org/img/wn/${h.icon}.png" alt="${h.description}" class="hourly-icon"><div class="hourly-temp">${h.temp}°C</div>${h.pop>0?`<div class="hourly-pop">${h.pop}% <span class="precip-icon">💧</span></div>`:''}</div>`;});hourlyHtml+='</div></div>';}
-        let dailyHtml = ''; if(forecastData.daily.length>0){dailyHtml='<div class="weather-forecast-daily"><h4>Daily</h4><div class="daily-items-container">';forecastData.daily.forEach(d=>{dailyHtml+=`<div class="daily-item"><div class="daily-dayName">${d.dayName}</div><img src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.description}" class="daily-icon"><div class="daily-temp">H:${d.tempMax}° L:${d.tempMin}°</div>${d.pop>0?`<div class="daily-pop">${d.pop}% <span class="precip-icon">💧</span></div>`:''}</div>`;});dailyHtml+='</div></div>';}
-        const footerHtml = `<div class="weather-last-updated">Current weather updated: ${lastUpdatedTime}</div>`;
-        this.weatherWidgetDiv.innerHTML = mainHtml + detailsHtml + hourlyHtml + dailyHtml + footerHtml;
+
+        const c = currentWeatherData;
+        const lastUpdatedTime = Utils.formatUnixTimestampToTime(c.dt, locationTimezoneOffset);
+        const sunriseTime = Utils.formatUnixTimestampToTime(c.sys.sunrise, locationTimezoneOffset);
+        const sunsetTime = Utils.formatUnixTimestampToTime(c.sys.sunset, locationTimezoneOffset);
+
+        // Main weather section
+        const mainHtml = `
+            <div class="weather-main">
+                <img src="https://openweathermap.org/img/wn/${c.weather[0].icon}@2x.png" alt="${c.weather[0].description}" class="weather-icon-large">
+                <div class="weather-temp-current">${Math.round(c.main.temp)}°</div>
+                <div class="weather-condition">${c.weather[0].description}</div>
+                <div class="weather-location">${c.name}</div>
+            </div>`;
+
+        // Forecast sections
+        let hourlyHtml = '';
+        if (forecastData.hourly.length > 0) {
+            hourlyHtml = `
+                <div class="weather-forecast-hourly">
+                    <h4>Next Hours</h4>
+                    <div class="hourly-items-container">
+                        ${forecastData.hourly.map(h => `
+                            <div class="hourly-item">
+                                <div class="hourly-time">${this._formatTime(h.time)}</div>
+                                <img src="https://openweathermap.org/img/wn/${h.icon}.png" alt="${h.description}" class="hourly-icon">
+                                <div class="hourly-temp">${h.temp}°</div>
+                                ${h.pop > 0 ? `<div class="hourly-pop">${h.pop}%💧</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        let dailyHtml = '';
+        if (forecastData.daily.length > 0) {
+            dailyHtml = `
+                <div class="weather-forecast-daily">
+                    <h4>Next Days</h4>
+                    <div class="daily-items-container">
+                        ${forecastData.daily.map(d => `
+                            <div class="daily-item">
+                                <div class="daily-dayName">${d.dayName}</div>
+                                <img src="https://openweathermap.org/img/wn/${d.icon}.png" alt="${d.description}" class="daily-icon">
+                                <div class="daily-temp">${d.tempMax}°/${d.tempMin}°</div>
+                                ${d.pop > 0 ? `<div class="daily-pop">${d.pop}%💧</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        // Details grid
+        const detailsHtml = `
+            <div class="weather-details-grid">
+                <div class="weather-detail-item"><strong>Feels</strong>${Math.round(c.main.feels_like)}°</div>
+                <div class="weather-detail-item"><strong>Wind</strong>${Math.round(c.wind.speed*3.6)} km/h</div>
+                <div class="weather-detail-item"><strong>Humidity</strong>${c.main.humidity}%</div>
+                <div class="weather-detail-item"><strong>Rise</strong>${sunriseTime}</div>
+                <div class="weather-detail-item"><strong>Set</strong>${sunsetTime}</div>
+                <div class="weather-detail-item"><strong>Press</strong>${c.main.pressure}</div>
+                ${c.visibility ? `<div class="weather-detail-item"><strong>Vis</strong>${(c.visibility/1000).toFixed(1)}km</div>` : ''}
+                ${aqiHtml}
+            </div>`;
+
+        const footerHtml = `<div class="weather-last-updated">Updated: ${lastUpdatedTime}</div>`;
+
+        // Combine all sections
+        this.weatherWidgetDiv.innerHTML = mainHtml + hourlyHtml + dailyHtml + detailsHtml + footerHtml;
     }
 };
