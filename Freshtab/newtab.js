@@ -89,8 +89,80 @@ function displayLocationError(msg="Could not get location.") {
 
 
 // --- Draggable Widget Order Logic ---
-function applyWidgetOrder(order) { if (!widgetGrid || !order?.length) return; order.forEach(id => { const el = document.getElementById(id); if (el?.parentElement === widgetGrid) widgetGrid.appendChild(el); });}
-function saveWidgetOrder() { if (!widgetGrid) return; const order = Array.from(widgetGrid.children).map(c => c.id).filter(id => Object.values(WIDGET_CONTAINER_IDS).includes(id)); chrome.storage.sync.set({ widgetOrder: order }, () => { if (chrome.runtime.lastError) console.error("Save order error:", chrome.runtime.lastError.message); });}
+function applyWidgetOrder(order) { 
+    if (!widgetGrid || !order?.length) return; 
+    
+    // Create a temporary document fragment
+    const fragment = document.createDocumentFragment();
+    
+    // First, append all widgets in the exact order specified
+    order.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            fragment.appendChild(el);
+        }
+    });
+    
+    // Then append any widgets that weren't in the order array
+    Array.from(widgetGrid.children).forEach(el => {
+        if (el.parentElement === widgetGrid) {
+            fragment.appendChild(el);
+        }
+    });
+    
+    // Clear the grid and append all widgets in the new order
+    widgetGrid.innerHTML = '';
+    widgetGrid.appendChild(fragment);
+
+    // Update the settings modal if it's open
+    updateSettingsModalOrder(order);
+}
+
+function updateSettingsModalOrder(order) {
+    const widgetOrderContainer = document.querySelector('#widgetOrderOptionsContainer');
+    if (!widgetOrderContainer) return; // Settings modal not open
+
+    const fragment = document.createDocumentFragment();
+    const existingItems = {};
+
+    // First, add items in the specified order
+    order.forEach(id => {
+        const widgetKey = id.replace('-widget-container', '');
+        const existingItem = widgetOrderContainer.querySelector(`[data-widget-key="${widgetKey}"]`);
+        if (existingItem) {
+            fragment.appendChild(existingItem);
+            existingItems[widgetKey] = true;
+        }
+    });
+
+    // Then add any remaining items
+    Array.from(widgetOrderContainer.children).forEach(item => {
+        const widgetKey = item.dataset.widgetKey;
+        if (!existingItems[widgetKey]) {
+            fragment.appendChild(item);
+        }
+    });
+
+    // Clear and append in new order
+    widgetOrderContainer.innerHTML = '';
+    widgetOrderContainer.appendChild(fragment);
+}
+
+function saveWidgetOrder() { 
+    if (!widgetGrid) return; 
+    const order = Array.from(widgetGrid.children)
+        .map(c => c.id)
+        .filter(id => Object.values(WIDGET_CONTAINER_IDS).includes(id)); 
+    
+    chrome.storage.sync.set({ widgetOrder: order }, () => { 
+        if (chrome.runtime.lastError) {
+            console.error("Save order error:", chrome.runtime.lastError.message);
+        } else {
+            // Successfully saved, now update both views
+            applyWidgetOrder(order);
+        }
+    });
+}
 
 
 // --- Settings Modal Logic (with TABS) ---
@@ -139,26 +211,26 @@ function populateSettingsModal(modalBody) {
                 <div id="widgetOrderOptionsContainer"></div>
             </div>
 
-            <div class="modal-footer">
-                <button class="settings-save-button">Save Settings</button>
-                <div id="settings-status"></div>
-            </div>
+            <div id="settings-status" class="settings-status"></div>
         `;
 
         // Populate widget order/visibility in the "Widgets" tab
         const widgetOrderContainer = modalBody.querySelector('#widgetOrderOptionsContainer');
         const loadedSettings = { ...defaultWidgetSettings, ...(widgetSettings || {}) };
         
-        let orderKeysToUse = Object.keys(ORDERABLE_WIDGETS); 
+        let orderKeysToUse = [];
         if (widgetOrder && Array.isArray(widgetOrder) && widgetOrder.length > 0) {
-            const savedContainerIds = widgetOrder;
-            const validOrderedKeys = []; const knownOrderableKeys = Object.keys(ORDERABLE_WIDGETS);
-            savedContainerIds.forEach(containerId => {
-                const key = containerId.replace('-widget-container', '');
-                if (knownOrderableKeys.includes(key) && !validOrderedKeys.includes(key)) validOrderedKeys.push(key);
+            orderKeysToUse = widgetOrder.map(id => id.replace('-widget-container', ''))
+                .filter(key => ORDERABLE_WIDGETS.hasOwnProperty(key));
+            
+            Object.keys(ORDERABLE_WIDGETS).forEach(key => {
+                if (!orderKeysToUse.includes(key)) {
+                    orderKeysToUse.push(key);
+                }
             });
-            knownOrderableKeys.forEach(key => { if (!validOrderedKeys.includes(key)) validOrderedKeys.push(key); });
-            orderKeysToUse = validOrderedKeys;
+        } else {
+            orderKeysToUse = DEFAULT_WIDGET_ORDER.map(id => id.replace('-widget-container', ''))
+                .filter(key => ORDERABLE_WIDGETS.hasOwnProperty(key));
         }
 
         orderKeysToUse.forEach(widgetKey => {
@@ -179,24 +251,112 @@ function populateSettingsModal(modalBody) {
             }
         });
 
-        // Make the list sortable
-        if (typeof Sortable !== 'undefined') {
-            new Sortable(widgetOrderContainer, { animation: 150, handle: '.widget-order-drag-handle', ghostClass: 'widget-order-ghost'});
-        }
+        // Initialize Dragula for the settings modal
+        const settingsDrake = dragula([widgetOrderContainer], {
+            moves: function(el, container, handle) {
+                return handle.classList.contains('widget-order-drag-handle');
+            }
+        });
+
+        settingsDrake.on('drop', function() {
+            saveSettingsFromModal(modalBody);
+        });
 
         // Add event listeners for modal buttons and tabs
         attachSettingsModalListeners(modalBody);
+
+        // Add auto-save listeners for inputs
+        const userNameInput = modalBody.querySelector('#userNameInput');
+        const manualLocationInput = modalBody.querySelector('#manualLocation');
+        const checkboxes = modalBody.querySelectorAll('input[type="checkbox"]');
+
+        userNameInput.addEventListener('input', debounce(() => saveSettingsFromModal(modalBody), 500));
+        manualLocationInput.addEventListener('input', debounce(() => saveSettingsFromModal(modalBody), 500));
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => saveSettingsFromModal(modalBody));
+        });
+    });
+}
+
+// Debounce helper function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function saveSettingsFromModal(modalBody) {
+    if (!modalBody) return;
+
+    const statusDiv = modalBody.querySelector('#settings-status');
+    const userNameValue = modalBody.querySelector('#userNameInput').value.trim();
+    const manualLocationValue = modalBody.querySelector('#manualLocation').value.trim();
+
+    const newWidgetSettings = {};
+    const newWidgetOrderContainerIds = [];
+    const orderedWidgetItems = modalBody.querySelectorAll('.widget-order-item');
+
+    orderedWidgetItems.forEach(item => {
+        const key = item.dataset.widgetKey;
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (key && checkbox) {
+            newWidgetSettings[key] = checkbox.checked;
+            newWidgetOrderContainerIds.push(`${key}-widget-container`);
+        }
+    });
+
+    const dataToSave = {
+        userName: userNameValue,
+        widgetSettings: newWidgetSettings,
+        widgetOrder: newWidgetOrderContainerIds,
+        manualLocation: manualLocationValue ? { name: manualLocationValue } : null
+    };
+
+    if (statusDiv) {
+        statusDiv.textContent = 'Saving...';
+        statusDiv.style.opacity = '1';
+    }
+
+    chrome.storage.sync.set(dataToSave, () => {
+        if (chrome.runtime.lastError) {
+            if (statusDiv) {
+                statusDiv.textContent = `Error: ${chrome.runtime.lastError.message}`;
+                statusDiv.style.opacity = '1';
+            }
+        } else {
+            if (statusDiv) {
+                statusDiv.textContent = 'Changes saved!';
+                statusDiv.style.opacity = '1';
+                setTimeout(() => {
+                    statusDiv.style.opacity = '0';
+                }, 1500);
+            }
+            // Apply changes immediately
+            if (mainHeader && dataToSave.userName) {
+                mainHeader.textContent = `Welcome, ${dataToSave.userName}!`;
+            }
+            applyWidgetOrder(newWidgetOrderContainerIds);
+            Object.keys(newWidgetSettings).forEach(key => {
+                const containerId = `${key}-widget-container`;
+                if (newWidgetSettings[key]) {
+                    showWidget(containerId);
+                } else {
+                    hideWidget(containerId);
+                }
+            });
+        }
     });
 }
 
 function attachSettingsModalListeners(modalBody) {
-    const saveButton = modalBody.querySelector('.settings-save-button');
     const useCurrentLocationBtn = modalBody.querySelector('#useCurrentLocationBtn');
     const tabLinks = modalBody.querySelectorAll('.tab-link');
-
-    if (saveButton) {
-        saveButton.addEventListener('click', saveSettingsFromModal);
-    }
 
     if (useCurrentLocationBtn) {
         useCurrentLocationBtn.addEventListener('click', async () => {
@@ -250,47 +410,6 @@ function attachSettingsModalListeners(modalBody) {
     });
 }
 
-function saveSettingsFromModal() {
-    const modalBody = document.getElementById('modalBodyEl');
-    if (!modalBody) return;
-
-    const statusDiv = modalBody.querySelector('#settings-status');
-    const userNameValue = modalBody.querySelector('#userNameInput').value.trim();
-    const manualLocationValue = modalBody.querySelector('#manualLocation').value.trim();
-
-    const newWidgetSettings = {};
-    const newWidgetOrderContainerIds = [];
-    const orderedWidgetItems = modalBody.querySelectorAll('.widget-order-item');
-
-    orderedWidgetItems.forEach(item => {
-        const key = item.dataset.widgetKey;
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        if (key && checkbox) {
-            newWidgetSettings[key] = checkbox.checked;
-            newWidgetOrderContainerIds.push(`${key}-widget-container`);
-        }
-    });
-
-    const dataToSave = {
-        userName: userNameValue,
-        widgetSettings: newWidgetSettings,
-        widgetOrder: newWidgetOrderContainerIds,
-        manualLocation: manualLocationValue ? { name: manualLocationValue } : null
-    };
-
-    statusDiv.textContent = 'Saving...';
-    chrome.storage.sync.set(dataToSave, () => {
-        if (chrome.runtime.lastError) {
-            statusDiv.textContent = `Error: ${chrome.runtime.lastError.message}`;
-        } else {
-            statusDiv.textContent = 'Settings saved! Reloading...';
-            setTimeout(() => {
-                location.reload();
-            }, 750);
-        }
-    });
-}
-
 
 // --- Main Initialization Logic ---
 async function initializeDashboard() {
@@ -323,40 +442,86 @@ async function initializeDashboard() {
             activeWidgetKeys[key] = !!currentWidgetSettings[key];
         });
 
+        // First, hide/show widgets based on settings
         Object.keys(WIDGET_CONTAINER_IDS).forEach(key => {
             activeWidgetKeys[key] ? showWidget(WIDGET_CONTAINER_IDS[key]) : hideWidget(WIDGET_CONTAINER_IDS[key]);
         });
+
+        // Determine the widget order
+        let orderToApply = [];
+        if (savedWidgetOrder?.length > 0) {
+            // Filter out inactive widgets from saved order
+            orderToApply = savedWidgetOrder.filter(id => 
+                Object.values(WIDGET_CONTAINER_IDS).includes(id) && 
+                activeWidgetKeys[id.replace('-widget-container', '')]
+            );
+            
+            // Add any active widgets that aren't in the saved order
+            DEFAULT_WIDGET_ORDER.forEach(id => {
+                const key = id.replace('-widget-container', '');
+                if (activeWidgetKeys[key] && !orderToApply.includes(id)) {
+                    orderToApply.push(id);
+                }
+            });
+        } else {
+            // Use default order, filtering out inactive widgets
+            orderToApply = DEFAULT_WIDGET_ORDER.filter(id => 
+                activeWidgetKeys[id.replace('-widget-container', '')]
+            );
+        }
+
+        // Apply the order before initializing widgets
+        if (widgetGrid && orderToApply.length > 0) {
+            applyWidgetOrder(orderToApply);
+        }
         
+        // Initialize widgets
         const initPromises = [];
         const locationNeededWidgetKeys = ['weather', 'events', 'news'];
         let someLocationWidgetActiveAndNeedsLocation = locationNeededWidgetKeys.some(key => activeWidgetKeys[key]);
 
         if (effectiveLocation) {
-            if (activeWidgetKeys.weather && typeof WeatherWidget?.init === 'function') initPromises.push(WeatherWidget.init(effectiveLocation, OPENWEATHERMAP_API_KEY, currentWidgetSettings));
-            if (activeWidgetKeys.events && typeof EventsWidget?.init === 'function') initPromises.push(EventsWidget.init(effectiveLocation, TICKETMASTER_API_KEY));
-            if (activeWidgetKeys.news && typeof NewsWidget?.init === 'function') initPromises.push(NewsWidget.init(effectiveLocation, GNEWS_API_KEY));
+            if (activeWidgetKeys.weather && typeof WeatherWidget?.init === 'function') 
+                initPromises.push(WeatherWidget.init(effectiveLocation, OPENWEATHERMAP_API_KEY, currentWidgetSettings));
+            if (activeWidgetKeys.events && typeof EventsWidget?.init === 'function') 
+                initPromises.push(EventsWidget.init(effectiveLocation, TICKETMASTER_API_KEY));
+            if (activeWidgetKeys.news && typeof NewsWidget?.init === 'function') 
+                initPromises.push(NewsWidget.init(effectiveLocation, GNEWS_API_KEY));
         } else if (someLocationWidgetActiveAndNeedsLocation) {
-             if(locationErrorDiv && (locationErrorDiv.style.display === 'none' || !locationErrorDiv.textContent.trim())) {
-                 displayLocationError("Location data needed for some active widgets. Please set in options or allow browser location.");
-             }
+            if(locationErrorDiv && (locationErrorDiv.style.display === 'none' || !locationErrorDiv.textContent.trim())) {
+                displayLocationError("Location data needed for some active widgets. Please set in options or allow browser location.");
+            }
         }
 
-        if (activeWidgetKeys.todo && typeof TodoWidget?.init === 'function') initPromises.push(TodoWidget.init());
-        if (activeWidgetKeys.notes && typeof NotesWidget?.init === 'function') initPromises.push(NotesWidget.init());
-        if (activeWidgetKeys.topSites && typeof TopSitesWidget?.init === 'function') initPromises.push(TopSitesWidget.init());
+        if (activeWidgetKeys.todo && typeof TodoWidget?.init === 'function') 
+            initPromises.push(TodoWidget.init());
+        if (activeWidgetKeys.notes && typeof NotesWidget?.init === 'function') 
+            initPromises.push(NotesWidget.init());
+        if (activeWidgetKeys.topSites && typeof TopSitesWidget?.init === 'function') 
+            initPromises.push(TopSitesWidget.init());
         
-        try { await Promise.allSettled(initPromises); } catch(e) { console.error("Error during widget initializations", e); }
-
-        if (widgetGrid) {
-            let orderToApply = DEFAULT_WIDGET_ORDER.filter(id => activeWidgetKeys[id.replace('-widget-container','')]);
-            if (savedWidgetOrder?.length > 0) {
-                const validSO = savedWidgetOrder.filter(id => Object.values(WIDGET_CONTAINER_IDS).includes(id) && activeWidgetKeys[id.replace('-widget-container','')]);
-                const currentOrderSet = new Set(validSO);
-                DEFAULT_WIDGET_ORDER.forEach(id => { if(activeWidgetKeys[id.replace('-widget-container','')] && !currentOrderSet.has(id)) validSO.push(id); });
-                if (validSO.length > 0 || Object.values(activeWidgetKeys).some(v => v)) orderToApply = validSO; else orderToApply = [];
+        try { 
+            await Promise.allSettled(initPromises);
+            
+            // Re-apply the order after all widgets are initialized
+            if (widgetGrid && orderToApply.length > 0) {
+                applyWidgetOrder(orderToApply);
             }
-            applyWidgetOrder(orderToApply);
-            if (typeof Sortable !== 'undefined') new Sortable(widgetGrid, { animation: 150, ghostClass: 'widget-sortable-ghost', handle: '.drag-handle-icon', onEnd: saveWidgetOrder });
+            
+            // Initialize Dragula for the main widget grid
+            if (widgetGrid) {
+                const gridDrake = dragula([widgetGrid], {
+                    moves: function(el, container, handle) {
+                        return handle.classList.contains('drag-handle-icon');
+                    }
+                });
+
+                gridDrake.on('drop', function() {
+                    saveWidgetOrder();
+                });
+            }
+        } catch(e) { 
+            console.error("Error during widget initializations", e); 
         }
     });
 }

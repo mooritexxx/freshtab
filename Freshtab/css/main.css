@@ -427,14 +427,6 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
     margin-right: 15px; 
     color: var(--text-color-subtle);
 }
-.modal-body .widget-order-item label { 
-    margin-bottom: 0; 
-    font-weight: normal; 
-    display: flex; 
-    align-items: center; 
-    flex-grow: 1;
-    font-size: 0.95em;
-}
 .modal-body .widget-order-item input[type="checkbox"] { 
     margin-right: 15px; 
     width: 18px; 
@@ -446,31 +438,63 @@ body.dark-mode #googleSearchForm {box-shadow: 0 2px 5px rgba(0,0,0,0.15);}
     opacity: 0.5; 
     background: var(--accent-color);
 }
-.modal-footer {
-    margin-top: auto; /* Pushes footer to the bottom */
-    padding-top: 20px;
-    border-top: 1px solid var(--widget-border-light);
-}
-.modal-body .settings-save-button {
-    display: block;
-    width: 100%;
-    padding: 10px 25px;
-    font-size: 1.05em;
-    font-weight: bold;
-    background-color: var(--button-primary-bg);
-    color: var(--button-primary-text);
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.modal-body .settings-save-button:hover {
-    background-color: var(--button-primary-hover-bg);
-}
-.modal-body #settings-status {
-    margin-top: 15px;
-    font-style: italic;
+.modal-body .settings-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--widget-bg);
     color: var(--accent-color);
-    text-align: center;
-    height: 20px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px var(--widget-shadow);
+    font-size: 0.9em;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2100;
+}
+
+/* Dragula-specific styles */
+.gu-mirror {
+    position: fixed !important;
+    margin: 0 !important;
+    z-index: 9999 !important;
+    opacity: 0.8;
+    background-color: var(--widget-bg);
+    box-shadow: 0 6px 18px var(--widget-shadow);
+    border-radius: 12px;
+}
+
+.gu-hide {
+    display: none !important;
+}
+
+.gu-unselectable {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
+
+.gu-transit {
+    opacity: 0.2;
+    background-color: var(--accent-color);
+    border: 2px dashed var(--accent-color);
+}
+
+/* Adjust widget container for Dragula */
+.widget-container.gu-mirror {
+    transform: rotate(2deg);
+    transition: transform 0.2s ease;
+}
+
+.widget-order-item.gu-mirror {
+    background-color: var(--widget-bg);
+    border: 1px solid var(--widget-border-light);
+    padding: 8px 5px;
+    border-radius: 4px;
+}
+
+/* Remove old footer styles since we don't need them anymore */
+.modal-footer {
+    display: none;
 }
